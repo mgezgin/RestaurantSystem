@@ -10,19 +10,8 @@ namespace RestaurantSystem.Infrastructure.Persistence.Configurations
         {
             builder.ToTable("Users");
 
-            builder.Property(e => e.FirstName)
-                .HasMaxLength(50)
-                .IsRequired();
-
-            builder.Property(e => e.LastName)
-                .HasMaxLength(50)
-                .IsRequired();
-
-            builder.Property(e => e.CreatedAt)
-                .IsRequired();
-
-            builder.Property(e => e.RefreshToken)
-                .HasMaxLength(256);
+            builder.Property(u => u.Role)
+                .HasConversion<string>();
         }
     }
 }

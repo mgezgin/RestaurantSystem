@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Common.Interfaces;
 
 namespace RestaurantSystem.Domain.Common
@@ -8,6 +9,8 @@ namespace RestaurantSystem.Domain.Common
 
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
+
+        public required UserRole Role { get; set; }
 
         // Audit properties
         public DateTime CreatedAt { get; set; }
