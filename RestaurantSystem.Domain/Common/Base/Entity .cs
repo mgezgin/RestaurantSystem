@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RestaurantSystem.Domain.Common
+namespace RestaurantSystem.Domain.Common.Base
 {
     public abstract class Entity : BaseEntity
     {

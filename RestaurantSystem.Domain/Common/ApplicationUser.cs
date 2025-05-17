@@ -1,16 +1,13 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using RestaurantSystem.Domain.Common.Interfaces;
 
-namespace RestaurantSystem.Domain.Identity
+namespace RestaurantSystem.Domain.Common
 {
     public class ApplicationUser : IdentityUser<Guid>, IAuditable, ISoftDelete
     {
 
-
-
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
-
 
         // Audit properties
         public DateTime CreatedAt { get; set; }
