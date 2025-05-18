@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RestaurantSystem.Domain.Common.Interfaces
 {
-    interface IAuditable
+    public interface IAuditable
     {
         DateTime CreatedAt { get; set; }
         DateTime? UpdatedAt { get; set; }

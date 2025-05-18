@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RestaurantSystem.Domain.Common.Interfaces
 {
-    interface ISoftDelete
+    public interface ISoftDelete
     {
         bool IsDeleted { get; set; }
         DateTime? DeletedAt { get; set; }

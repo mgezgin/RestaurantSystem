@@ -27,7 +27,7 @@ namespace RestaurantSystem.Api.Common
         {
             var commandType = command.GetType();
             var handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(TResult));
-            dynamic handler = _serviceProvider!.GetService(handlerType);
+            dynamic handler = _serviceProvider.GetService(handlerType)!;
 
             if (handler == null)
                 throw new Exception($"No command handler registered for {commandType.Name}");
@@ -47,7 +47,7 @@ namespace RestaurantSystem.Api.Common
             where TQuery : IQuery<TResult>
         {
             var handlerType = typeof(IQueryHandler<TQuery, TResult>);
-            var handler = (IQueryHandler<TQuery, TResult>)_serviceProvider.GetService(handlerType);
+            var handler = _serviceProvider.GetService(handlerType) as IQueryHandler<TQuery, TResult>;
 
             if (handler == null)
                 throw new Exception($"No query handler registered for {typeof(TQuery).Name}");
@@ -60,7 +60,7 @@ namespace RestaurantSystem.Api.Common
         {
             var queryType = query.GetType();
             var handlerType = typeof(IQueryHandler<,>).MakeGenericType(queryType, typeof(TResult));
-            dynamic handler = _serviceProvider.GetService(handlerType);
+            dynamic? handler = _serviceProvider.GetService(handlerType);
 
             if (handler == null)
                 throw new Exception($"No query handler registered for {queryType.Name}");
