@@ -121,8 +121,15 @@ builder.Services.AddAuthorization(opt =>
 
 builder.Services.AddInfrastructureRegistration();
 
-builder.Services.AddCors();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpContextAccessor();
@@ -136,10 +143,13 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowAll");
 
 app.UseValidationExceptionHandling();
 
@@ -148,6 +158,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-//await app.Services.EnsureDatabaseCreatedAsync();
-//await app.Services.MigrateApplicationDatabaseAsync();
+if (app.Environment.IsDevelopment())
+{
+    await app.Services.EnsureDatabaseCreatedAsync();
+    await app.Services.MigrateApplicationDatabaseAsync();
+}
+
 app.Run();
