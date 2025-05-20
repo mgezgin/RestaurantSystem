@@ -7,8 +7,7 @@ gitleaks:
     name: zricethezav/gitleaks
     entrypoint: [""]
   script:
-    - gitleaks detect --verbose --source . -f json -r gitleaks.json
-  allow_failure: true
+    - gitleaks detect --verbose --source .
 
 semgrep:
   stage: test
@@ -16,8 +15,7 @@ semgrep:
   variables:
     SEMGREP_RULES: p/javascript
   script:
-    - semgrep ci --json --output semgrep.json
-  allow_failure: true
+    - semgrep ci 
 
 
 
