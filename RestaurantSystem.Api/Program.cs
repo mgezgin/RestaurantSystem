@@ -20,6 +20,11 @@ using RestaurantSystem.Api.Features.Auth;
 using RestaurantSystem.Api.Features.Users.Interfaces;
 using RestaurantSystem.Api.Features.Users;
 using RestaurantSystem.Api.Common.Middleware;
+using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +39,11 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Restaurant System API", Version = "v1" });
+});
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
@@ -104,20 +114,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
+builder.Services.AddAuthorization();
 
-builder.Services.AddAuthorization(opt =>
-{
-    opt.AddRolePolicies();
-
-    opt.DefaultPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-    .Build();
-
-    opt.FallbackPolicy = new AuthorizationPolicyBuilder()
-     .RequireAuthenticatedUser()
-     .Build();
-});
 
 builder.Services.AddInfrastructureRegistration();
 
@@ -145,6 +143,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Restaurant System API v1"));
 }
 
 app.UseHttpsRedirection();

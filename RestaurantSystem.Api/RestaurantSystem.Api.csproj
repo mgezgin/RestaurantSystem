@@ -25,11 +25,11 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.1" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Folder Include="Features\Auth\Commands\LoginCommand\NewFolder\" />
-		<Folder Include="Features\Dto\" />
 	</ItemGroup>
 
 	<ItemGroup>

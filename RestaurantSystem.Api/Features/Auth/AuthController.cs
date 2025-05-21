@@ -19,7 +19,7 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    [HttpPost]
+    [HttpPost("register/customer")]
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Register([FromBody] RegisterRequest request)
     {
@@ -72,7 +72,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("admin-only")]
-    [RequireRole(UserRole.Admin)]
+    [RequireAdmin]
     public ActionResult<ApiResponse<string>> AdminOnly()
     {
         return Ok(ApiResponse<string>.SuccessWithData("You are an admin!"));

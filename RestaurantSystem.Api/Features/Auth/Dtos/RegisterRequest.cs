@@ -22,6 +22,4 @@ public record RegisterRequest
     [Required]
     [Compare("Password")]
     public string ConfirmPassword { get; init; } = null!;
-
-    public UserRole Role { get; init; } = UserRole.Customer;
 }

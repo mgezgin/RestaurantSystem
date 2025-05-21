@@ -4,6 +4,7 @@ using RestaurantSystem.Domain.Common;
 using System.Security.Claims;
 using RestaurantSystem.Api.Features.Auth.Interfaces;
 using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.Domain.Common.Enums;
 
 namespace RestaurantSystem.Api.Features.Auth;
 
@@ -36,7 +37,7 @@ public class AuthService : IAuthService
             UserName = request.Email,
             FirstName = request.FirstName,
             LastName = request.LastName,
-            Role = request.Role,
+            Role = UserRole.Customer,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "System",
             RefreshToken = _tokenService.GenerateRefreshToken()
@@ -51,7 +52,7 @@ public class AuthService : IAuthService
         }
 
         // Add role to user
-        await _userManager.AddToRoleAsync(newUser, request.Role.ToString());
+        // await _userManager.AddToRoleAsync(newUser, request.Role.ToString());
 
         // Generate tokens
         var token = _tokenService.GenerateAccessToken(newUser);
