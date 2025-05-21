@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  restaurantsystem-api:
+    build:
+      context: .
+      dockerfile: RestaurantSystem.Api/Dockerfile
+    container_name: restaurant-api-dev
+    ports:
+      - "5221:8080"
+      - "7000:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=restaurantdb;Username=postgres;Password=postgres123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - restaurant-network-dev
+
+  postgres:
+    image: postgres:16
+    container_name: restaurant-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+      - POSTGRES_DB=restaurantdb
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+    networks:
+      - restaurant-network-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  restaurant-network-dev:
+    driver: bridge
+volumes:
+  postgres-data-dev:
