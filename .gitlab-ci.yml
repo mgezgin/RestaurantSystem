@@ -42,7 +42,7 @@ semgrep:
   variables:
     SEMGREP_RULES: p/javascript
   script:
-    - semgrep ci 
+    - semgrep ci .
 
 dependency_scanning:
   stage: test
