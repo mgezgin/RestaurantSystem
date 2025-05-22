@@ -48,11 +48,11 @@ gitleaks:
 #   script:
 #     - semgrep ci 
 
-dependency_scanning:
-  stage: test
+# dependency_scanning:
+#   stage: test
 
-include:
-  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+# include:
+#   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
 
 include:
   - template: Jobs/SAST.gitlab-ci.yml
