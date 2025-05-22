@@ -28,6 +28,9 @@ dotnet_test:
   script:
     - dotnet test RestaurantSystem.sln --logger:"console;verbosity=normal"
 
+sast:
+  stage: test
+
 gitleaks:
   stage: test
   image:
@@ -36,17 +39,22 @@ gitleaks:
   script:
     - gitleaks detect --verbose --source .
 
-semgrep:
-  stage: test
-  image: returntocorp/semgrep
-  variables:
-    SEMGREP_RULES: p/javascript
-  script:
-    - semgrep ci .
+
+# semgrep:
+#   stage: test
+#   image: returntocorp/semgrep
+#   variables:
+#     SEMGREP_RULES: p/javascript
+#   script:
+#     - semgrep ci 
 
 dependency_scanning:
   stage: test
 
 include:
   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+
 
