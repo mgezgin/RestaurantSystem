@@ -44,5 +44,11 @@ semgrep:
   script:
     - semgrep ci 
 
+include:
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+    stage: test 
+    
+
+
 
 
