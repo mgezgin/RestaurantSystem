@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Features.Auth.Commands.LoginCommand;
 using RestaurantSystem.Api.Features.Auth.Dtos;
 using RestaurantSystem.Api.Features.Auth.Interfaces;
 using RestaurantSystem.Domain.Common.Enums;
@@ -13,10 +15,12 @@ namespace RestaurantSystem.Api.Features.Auth;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly CustomMediator _mediator;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, CustomMediator mediator)
     {
         _authService = authService;
+        _mediator = mediator;
     }
 
     [HttpPost("register/customer")]
@@ -36,12 +40,11 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginRequest request)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginCommand request)
     {
         try
         {
-            var result = await _authService.LoginAsync(request);
-            return Ok(ApiResponse<AuthResponse>.SuccessWithData(result, "User logged in successfully"));
+            return Ok(_mediator.SendCommand(request));
         }
         catch (Exception ex)
         {
