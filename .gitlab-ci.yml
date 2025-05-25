@@ -1,6 +1,7 @@
 stages:
 # - cache
 - test
+- build
 
 # create_cache:
 #   stage: cache
