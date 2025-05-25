@@ -1,3 +1,7 @@
+variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE
+    IMAGE_TAG: $CI_PIPELINE_IID
+
 stages:
 # - cache
 - test
