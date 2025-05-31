@@ -1,5 +1,35 @@
 stages:
+- cache
 - test
+
+create_cache:
+  stage: cache
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  variables:
+    NUGET_PACKAGES: "$CI_PROJECT_DIR/.nuget/packages"
+  script:
+    - dotnet restore RestaurantSystem.sln --packages "$NUGET_PACKAGES"
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - .nuget/packages/
+    policy: push
+
+dotnet_test:
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  stage: test
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - ~/.nuget/packages/
+    policy: pull
+  before_script:
+    - dotnet restore RestaurantSystem.sln
+  script:
+    - dotnet test RestaurantSystem.sln --logger:"console;verbosity=normal"
+
+sast:
+  stage: test
 
 gitleaks:
   stage: test
@@ -9,13 +39,22 @@ gitleaks:
   script:
     - gitleaks detect --verbose --source .
 
-semgrep:
-  stage: test
-  image: returntocorp/semgrep
-  variables:
-    SEMGREP_RULES: p/javascript
-  script:
-    - semgrep ci 
 
+# semgrep:
+#   stage: test
+#   image: returntocorp/semgrep
+#   variables:
+#     SEMGREP_RULES: p/javascript
+#   script:
+#     - semgrep ci 
+
+# dependency_scanning:
+#   stage: test
+
+# include:
+#   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
 
 
