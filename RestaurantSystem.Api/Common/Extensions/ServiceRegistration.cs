@@ -57,7 +57,7 @@ namespace RestaurantSystem.Api.Common.Extensions
         public static IServiceCollection AddCustomMediator(this IServiceCollection services, params Assembly[] assemblies)
         {
             // Register the mediator
-            services.AddSingleton<CustomMediator>();
+            services.AddScoped<CustomMediator>();
 
             // Register all command handlers
             RegisterCommandHandlers(services, assemblies);

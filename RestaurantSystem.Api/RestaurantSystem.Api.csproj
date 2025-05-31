@@ -29,10 +29,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Features\Auth\Commands\LoginCommand\NewFolder\" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\RestaurantSystem.Domain\RestaurantSystem.Domain.csproj" />
 		<ProjectReference Include="..\RestaurantSystem.Infrastructure\RestaurantSystem.Infrastructure.csproj" />
 	</ItemGroup>

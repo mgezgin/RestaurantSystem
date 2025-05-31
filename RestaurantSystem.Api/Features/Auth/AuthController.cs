@@ -44,7 +44,7 @@ public class AuthController : ControllerBase
     {
         try
         {
-            return Ok(_mediator.SendCommand(request));
+            return Ok(await _mediator.SendCommand(request));
         }
         catch (Exception ex)
         {

@@ -16,10 +16,11 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, ApiResponse<Aut
     private readonly IConfiguration _configuration;
     private readonly ITokenService _tokenService;
 
-    public LoginCommandHandler(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+    public LoginCommandHandler(UserManager<ApplicationUser> userManager, IConfiguration configuration,ITokenService tokenService)
     {
         _userManager = userManager;
         _configuration = configuration;
+        _tokenService = tokenService;
     }
 
     public async Task<ApiResponse<AuthResponse>> Handle(LoginCommand command, CancellationToken cancellationToken)
