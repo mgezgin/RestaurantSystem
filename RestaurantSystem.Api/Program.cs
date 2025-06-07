@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Authorization;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Extensions;
 using Microsoft.Extensions.Options;
-using RestaurantSystem.Api.Features.Auth.Interfaces;
 using RestaurantSystem.Api.Features.Auth;
 using RestaurantSystem.Api.Features.Users.Interfaces;
 using RestaurantSystem.Api.Features.Users;
@@ -42,7 +41,40 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Restaurant System API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Restaurant System API",
+        Version = "v1",
+        Description = "A comprehensive restaurant management system API"
+    });
+
+    // Add JWT authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -114,6 +146,10 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+var emailSettings = builder.Configuration.GetSection("EmailSettings");
+builder.Services.Configure<EmailSettings>(emailSettings);
+
+
 builder.Services.AddAuthorization();
 
 
@@ -129,11 +165,12 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 
 
 var app = builder.Build();
@@ -144,8 +181,14 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
     app.MapOpenApi();
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Restaurant System API v1"));
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Restaurant System API v1");
+        c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+    });
 }
+
+app.UseExceptionHandling();
 
 app.UseHttpsRedirection();
 
