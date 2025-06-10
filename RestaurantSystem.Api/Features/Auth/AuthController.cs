@@ -1,12 +1,18 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Features.Auth.Commands.ForgotPasswordCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.LoginCommand;
+using RestaurantSystem.Api.Features.Auth.Commands.RefreshTokenCommand;
+using RestaurantSystem.Api.Features.Auth.Commands.RegisterCustomerCommand;
+using RestaurantSystem.Api.Features.Auth.Commands.RegisterUserCommand;
+using RestaurantSystem.Api.Features.Auth.Commands.ResetPasswordCommand;
+using RestaurantSystem.Api.Features.Auth.Commands.SendEmailVerificationCommand;
+using RestaurantSystem.Api.Features.Auth.Commands.VerifyEmailCommand;
 using RestaurantSystem.Api.Features.Auth.Dtos;
-using RestaurantSystem.Api.Features.Auth.Interfaces;
-using RestaurantSystem.Domain.Common.Enums;
 
 namespace RestaurantSystem.Api.Features.Auth;
 
@@ -14,59 +20,104 @@ namespace RestaurantSystem.Api.Features.Auth;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthService _authService;
     private readonly CustomMediator _mediator;
 
-    public AuthController(IAuthService authService, CustomMediator mediator)
+    public AuthController(CustomMediator mediator)
     {
-        _authService = authService;
         _mediator = mediator;
     }
 
+    /// <summary>
+    /// Register a new customer (public registration)
+    /// </summary>
     [HttpPost("register/customer")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> Register([FromBody] RegisterRequest request)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterCustomer([FromBody] RegisterCustomerCommand command)
     {
-        try
-        {
-            var result = await _authService.RegisterAsync(request);
-            return Ok(ApiResponse<AuthResponse>.SuccessWithData(result, "User registered successfully"));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ApiResponse<AuthResponse>.Failure(ex.Message));
-        }
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
     }
 
+    /// <summary>
+    /// Register a new user with specific role (admin only)
+    /// </summary>
+    [HttpPost("register/staff")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterUser([FromBody] RegisterUserCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// User login
+    /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginCommand request)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginCommand command)
     {
-        try
-        {
-            return Ok(await _mediator.SendCommand(request));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ApiResponse<AuthResponse>.Failure(ex.Message));
-        }
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
     }
 
+    /// <summary>
+    /// Refresh access token
+    /// </summary>
     [HttpPost("refresh-token")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> RefreshToken([FromBody] RefreshTokenRequest request)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> RefreshToken([FromBody] RefreshTokenCommand command)
     {
-        try
-        {
-            var result = await _authService.RefreshTokenAsync(request);
-            return Ok(ApiResponse<AuthResponse>.SuccessWithData(result, "Token refreshed successfully"));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ApiResponse<AuthResponse>.Failure(ex.Message));
-        }
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
     }
 
+    /// <summary>
+    /// Request password reset
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<string>>> ForgotPassword([FromBody] ForgotPasswordCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Reset password with token
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<string>>> ResetPassword([FromBody] ResetPasswordCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Send email verification
+    /// </summary>
+    [HttpPost("send-email-verification")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<string>>> SendEmailVerification([FromBody] SendEmailVerificationCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Verify email address
+    /// </summary>
+    [HttpPost("verify-email")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<string>>> VerifyEmail([FromBody] VerifyEmailCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Test authentication (requires valid JWT token)
+    /// </summary>
     [HttpGet("test-auth")]
     [Authorize]
     public ActionResult<ApiResponse<string>> TestAuth()
@@ -74,6 +125,9 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<string>.SuccessWithData("You are authenticated!"));
     }
 
+    /// <summary>
+    /// Admin-only endpoint for testing authorization
+    /// </summary>
     [HttpGet("admin-only")]
     [RequireAdmin]
     public ActionResult<ApiResponse<string>> AdminOnly()
