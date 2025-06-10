@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using RestaurantSystem.Domain.Common;
 using RestaurantSystem.Domain.Common.Interfaces;
+using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence.Configurations;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -14,15 +15,20 @@ namespace RestaurantSystem.Infrastructure.Persistence
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
+        // Product-related DbSets
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<ProductCategory> ProductCategories { get; set; }
+        public DbSet<ProductVariation> ProductVariations { get; set; }
+        public DbSet<ProductSideItem> ProductSideItems { get; set; }
+        public DbSet<DailyMenu> DailyMenus { get; set; }
+        public DbSet<DailyMenuProduct> DailyMenuProducts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
             ConfigurePostgreSQL(builder);
-
-
-            builder.ApplyConfiguration(new ApplicationUserConfiguration());
 
             builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 

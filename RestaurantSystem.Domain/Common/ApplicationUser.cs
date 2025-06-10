@@ -12,7 +12,7 @@ namespace RestaurantSystem.Domain.Common
 
         public required UserRole Role { get; set; }
 
-        public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Metadata { get; set; } = [];
 
         // Audit properties
         public DateTime CreatedAt { get; set; }

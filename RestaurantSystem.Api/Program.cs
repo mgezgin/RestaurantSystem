@@ -11,17 +11,11 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.Api.Settings;
 using RestaurantSystem.Api.Common.Validation;
-using Microsoft.AspNetCore.Authorization;
-using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Extensions;
-using Microsoft.Extensions.Options;
-using RestaurantSystem.Api.Features.Auth;
-using RestaurantSystem.Api.Features.Users.Interfaces;
-using RestaurantSystem.Api.Features.Users;
 using RestaurantSystem.Api.Common.Middleware;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 
 
@@ -32,8 +26,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApiRegistration();
 
-builder.Services.AddControllers();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
 
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -149,6 +153,9 @@ builder.Services.AddAuthentication(options =>
 var emailSettings = builder.Configuration.GetSection("EmailSettings");
 builder.Services.Configure<EmailSettings>(emailSettings);
 
+builder.Services.AddFileStorage(builder.Configuration);
+
+
 
 builder.Services.AddAuthorization();
 
@@ -167,7 +174,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
