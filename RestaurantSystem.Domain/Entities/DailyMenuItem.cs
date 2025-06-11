@@ -1,7 +1,7 @@
 ﻿using RestaurantSystem.Domain.Common.Base;
 
 namespace RestaurantSystem.Domain.Entities;
-public class DailyMenuProduct : Entity
+public class DailyMenuItem : Entity
 {
     public bool IsAvailable { get; set; } = true;
     public decimal? SpecialPrice { get; set; } // Override regular price if set

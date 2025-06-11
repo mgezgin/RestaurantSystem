@@ -22,7 +22,7 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<ProductVariation> ProductVariations { get; set; }
         public DbSet<ProductSideItem> ProductSideItems { get; set; }
         public DbSet<DailyMenu> DailyMenus { get; set; }
-        public DbSet<DailyMenuProduct> DailyMenuProducts { get; set; }
+        public DbSet<DailyMenuItem> DailyMenuItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

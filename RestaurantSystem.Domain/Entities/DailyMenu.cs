@@ -3,10 +3,10 @@
 namespace RestaurantSystem.Domain.Entities;
 public class DailyMenu : SoftDeleteEntity
 {
-    public DateOnly MenuDate { get; set; }
-    public string? SpecialMessage { get; set; }
+    public DateOnly Date { get; set; }
+    public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
 
     // Navigation properties
-    public virtual ICollection<DailyMenuProduct> DailyMenuProducts { get; set; } = [];
+    public virtual ICollection<DailyMenuItem> MenuItems { get; set; } = [];
 }
