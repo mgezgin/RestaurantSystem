@@ -1,10 +1,11 @@
 ﻿namespace RestaurantSystem.Api.Features.Products.Dtos;
 
-public class DailyMenuDto
+public record DailyMenuDto
 {
-    public Guid Id { get; set; }
-    public DateOnly MenuDate { get; set; }
-    public string? SpecialMessage { get; set; }
-    public bool IsActive { get; set; }
-    public List<DailyMenuProductDto> Products { get; set; } = new();
+    public Guid Id { get; init; }
+    public DateOnly Date { get; init; }
+    public string? Name { get; init; }
+    public string? Description { get; init; }
+    public bool IsActive { get; init; }
+    public List<DailyMenuProductDto> Products { get; init; } = new();
 }

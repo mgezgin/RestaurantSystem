@@ -1,9 +1,9 @@
 ﻿namespace RestaurantSystem.Api.Features.Products.Dtos;
 
-public class ProductCategoryDto
+public record ProductCategoryDto
 {
-    public Guid CategoryId { get; set; }
-    public string CategoryName { get; set; } = null!;
-    public bool IsPrimary { get; set; }
-    public int DisplayOrder { get; set; }
+    public Guid CategoryId { get; init; }
+    public string CategoryName { get; init; } = string.Empty;
+    public bool IsPrimary { get; init; }
+    public int DisplayOrder { get; init; }
 }

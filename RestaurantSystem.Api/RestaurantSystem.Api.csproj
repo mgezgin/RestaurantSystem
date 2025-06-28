@@ -34,8 +34,4 @@
 		<ProjectReference Include="..\RestaurantSystem.Infrastructure\RestaurantSystem.Infrastructure.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Features\Products\Commands\" />
-	</ItemGroup>
-
 </Project>

@@ -7,7 +7,6 @@ public class Product : SoftDeleteEntity
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public decimal BasePrice { get; set; }
-    public string? ImageUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsAvailable { get; set; } = true;
     public int PreparationTimeMinutes { get; set; }
@@ -17,6 +16,7 @@ public class Product : SoftDeleteEntity
     public int DisplayOrder { get; set; }
 
     // Navigation properties
+    public virtual ICollection<ProductImage> Images { get; set; } = [];
     public virtual ICollection<ProductCategory> ProductCategories { get; set; } = new List<ProductCategory>();
     public virtual ICollection<ProductVariation> Variations { get; set; } = [];
     public virtual ICollection<ProductSideItem> SuggestedSideItems { get; set; } = [];

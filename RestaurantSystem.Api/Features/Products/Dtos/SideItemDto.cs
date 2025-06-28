@@ -1,12 +1,12 @@
 ﻿namespace RestaurantSystem.Api.Features.Products.Dtos;
 
-public class SideItemDto
+public record SideItemDto
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = null!;
-    public string? Description { get; set; }
-    public decimal Price { get; set; }
-    public string? ImageUrl { get; set; }
-    public bool IsRequired { get; set; }
-    public int DisplayOrder { get; set; }
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public decimal Price { get; init; }
+    public string? ImageUrl { get; init; }
+    public bool IsRequired { get; init; }
+    public int DisplayOrder { get; init; }
 }

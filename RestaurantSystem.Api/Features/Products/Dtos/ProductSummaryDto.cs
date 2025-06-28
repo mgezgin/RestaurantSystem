@@ -2,18 +2,18 @@
 
 namespace RestaurantSystem.Api.Features.Products.Dtos;
 
-public class ProductSummaryDto
+public record ProductSummaryDto
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = null!;
-    public string? Description { get; set; }
-    public decimal BasePrice { get; set; }
-    public string? ImageUrl { get; set; }
-    public bool IsActive { get; set; }
-    public bool IsAvailable { get; set; }
-    public ProductType Type { get; set; }
-    public List<string> CategoryNames { get; set; } = new();
-    public string? PrimaryCategoryName { get; set; }
-    public int VariationCount { get; set; }
-    public int SideItemCount { get; set; }
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public decimal BasePrice { get; init; }
+    public string? ImageUrl { get; init; }
+    public bool IsActive { get; init; }
+    public bool IsAvailable { get; init; }
+    public ProductType Type { get; init; }
+    public List<string> CategoryNames { get; init; } = new();
+    public string? PrimaryCategoryName { get; init; }
+    public int VariationCount { get; init; }
+    public int SideItemCount { get; init; }
 }
