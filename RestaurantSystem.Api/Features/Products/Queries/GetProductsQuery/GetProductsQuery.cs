@@ -6,7 +6,7 @@ using RestaurantSystem.Api.Features.Products.Dtos;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 
-namespace RestaurantSystem.Api.Features.Products.Commands.GetProductsQuery;
+namespace RestaurantSystem.Api.Features.Products.Queries.GetProductsQuery;
 
 public record GetProductsQuery(
     Guid? CategoryId,
@@ -64,7 +64,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
             var searchLower = query.Search.ToLower();
             productsQuery = productsQuery.Where(p =>
                 p.Name.ToLower().Contains(searchLower) ||
-                (p.Description != null && p.Description.ToLower().Contains(searchLower)));
+                p.Description != null && p.Description.ToLower().Contains(searchLower));
         }
 
         // Get total count

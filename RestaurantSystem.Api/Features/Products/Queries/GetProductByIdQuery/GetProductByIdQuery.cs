@@ -4,7 +4,7 @@ using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Products.Dtos;
 using RestaurantSystem.Infrastructure.Persistence;
 
-namespace RestaurantSystem.Api.Features.Products.Commands.GetProductByIdQuery;
+namespace RestaurantSystem.Api.Features.Products.Queries.GetProductByIdQuery;
 
 public record GetProductByIdQuery(Guid Id) : IQuery<ApiResponse<ProductDto>>;
 

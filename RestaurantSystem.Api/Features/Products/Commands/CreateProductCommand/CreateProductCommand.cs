@@ -126,6 +126,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
                 _context.ProductVariations.Add(variation);
+                product.Variations.Add(variation);
             }
         }
 

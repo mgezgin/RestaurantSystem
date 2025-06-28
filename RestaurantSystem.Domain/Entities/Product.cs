@@ -7,6 +7,7 @@ public class Product : SoftDeleteEntity
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public decimal BasePrice { get; set; }
+    public string? ImageUrl { get; init; } // Primary image URL for backward compatibility
     public bool IsActive { get; set; } = true;
     public bool IsAvailable { get; set; } = true;
     public int PreparationTimeMinutes { get; set; }

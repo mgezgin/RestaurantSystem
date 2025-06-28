@@ -2,8 +2,8 @@
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
-using RestaurantSystem.Api.Features.Products.Commands.GetProductByIdQuery;
 using RestaurantSystem.Api.Features.Products.Dtos;
+using RestaurantSystem.Api.Features.Products.Queries.GetProductByIdQuery;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -189,7 +189,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             .FirstAsync(p => p.Id == product.Id, cancellationToken);
 
         var handler = new GetProductByIdQueryHandler(_context, _getProductlogger);
-        var result = await handler.Handle(new GetProductByIdQuery.GetProductByIdQuery(product.Id), cancellationToken);
+        var result = await handler.Handle(new GetProductByIdQuery(product.Id), cancellationToken);
 
         _logger.LogInformation("Product {ProductId} updated successfully by user {UserId}",
             product.Id, _currentUserService.UserId);

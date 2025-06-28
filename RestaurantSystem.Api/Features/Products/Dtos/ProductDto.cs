@@ -9,7 +9,7 @@ public record ProductDto
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
     public decimal BasePrice { get; init; }
-    public string? ImageUrl { get; init; }
+    public string? ImageUrl { get; init; } // Primary image URL for backward compatibility
     public bool IsActive { get; init; }
     public bool IsAvailable { get; init; }
     public int PreparationTimeMinutes { get; init; }
@@ -18,7 +18,7 @@ public record ProductDto
     public List<string> Allergens { get; init; } = [];
     public int DisplayOrder { get; init; }
 
-    public List<ProductImage> Images { get; init; } = [];
+    public List<ProductImageDto> Images { get; init; } = [];
     public List<ProductCategoryDto> Categories { get; init; } = [];
     public CategoryDto? PrimaryCategory { get; init; }
     public List<ProductVariationDto> Variations { get; init; } = [];
