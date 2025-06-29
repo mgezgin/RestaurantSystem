@@ -17,6 +17,7 @@ public record ProductDto
     public List<string> Ingredients { get; init; } = [];
     public List<string> Allergens { get; init; } = [];
     public int DisplayOrder { get; init; }
+    public ProductDescriptionsDto Content { get; set; } = new();
 
     public List<ProductImageDto> Images { get; init; } = [];
     public List<ProductCategoryDto> Categories { get; init; } = [];

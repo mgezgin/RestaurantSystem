@@ -98,8 +98,18 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
                     IsRequired = si.IsRequired,
                     DisplayOrder = si.DisplayOrder
                 })
-                .ToList()
+                .ToList(),
+            Content = new()
         };
+
+        foreach (var description in product.Descriptions)
+        {
+            productDto.Content[description.Lang] = new ProductDescriptionDto
+            {
+                Name = description.Name,
+                Description = description.Description
+            };
+        }
 
         _logger.LogInformation("Retrieved product {ProductId} successfully", query.Id);
         return ApiResponse<ProductDto>.SuccessWithData(productDto);

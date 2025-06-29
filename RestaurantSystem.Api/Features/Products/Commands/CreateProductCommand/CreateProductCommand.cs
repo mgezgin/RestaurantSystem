@@ -24,7 +24,8 @@ public record CreateProductCommand(
     List<Guid> CategoryIds,
     Guid? PrimaryCategoryId,
     List<CreateProductVariationDto>? Variations,
-    List<Guid>? SuggestedSideItemIds
+    List<Guid>? SuggestedSideItemIds,
+    ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
 public record CreateProductVariationDto(
@@ -72,6 +73,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             }
         }
 
+
+
         var product = new Product
         {
             Name = command.Name,
@@ -108,6 +111,29 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
             };
             _context.ProductCategories.Add(productCategory);
+        }
+
+        foreach (var (languageCode, description) in command.Content)
+        {
+
+            var isAny = await _context.ProductDescriptions.AnyAsync(x => string.Equals(languageCode, x.Lang, StringComparison.InvariantCulture));
+
+            if (isAny)
+            {
+                return ApiResponse<ProductDto>.Failure($"language {languageCode} used more than one");
+            }
+
+            var productDescription = new ProductDescription
+            {
+                ProductId = product.Id,
+                Lang = languageCode,
+                Name = description.Name,
+                Description = description.Description,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+            };
+            _context.ProductDescriptions.Add(productDescription);
+            product.Descriptions.Add(productDescription);
         }
 
         if (command.Variations?.Any() == true)
@@ -168,7 +194,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
 
     private static ProductDto MapToProductDto(Product product)
     {
-        return new ProductDto
+        var dto = new ProductDto
         {
             Id = product.Id,
             Name = product.Name,
@@ -222,7 +248,18 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 Price = si.SideItemProduct.BasePrice,
                 IsRequired = si.IsRequired,
                 DisplayOrder = si.DisplayOrder
-            }).ToList()
+            }).ToList(),
+            Content = new()
         };
+
+        foreach (var description in product.Descriptions)
+        {
+            dto.Content[description.Lang] = new ProductDescriptionDto
+            {
+                Name = description.Name,
+                Description = description.Description
+            };
+        }
+        return dto;
     }
 }

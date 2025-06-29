@@ -7,6 +7,7 @@ using RestaurantSystem.Api.Features.Products.Queries.GetProductByIdQuery;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Model;
 
 namespace RestaurantSystem.Api.Features.Products.Commands.UpdateProductCommand;
 
@@ -26,7 +27,8 @@ public record UpdateProductCommand(
     List<Guid> CategoryIds,
     Guid? PrimaryCategoryId,
     List<UpdateProductVariationDto>? Variations,
-    List<Guid>? SuggestedSideItemIds
+    List<Guid>? SuggestedSideItemIds,
+    ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
 public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand, ApiResponse<ProductDto>>
@@ -109,6 +111,27 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                 CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
             };
             _context.ProductCategories.Add(productCategory);
+        }
+
+        _context.ProductDescriptions.RemoveRange(product.Descriptions);
+
+        foreach (var key in command.Content.Keys)
+        {
+            var content = command.Content[key];
+            var productDescription = new ProductDescription()
+            {
+                UpdatedBy = _currentUserService.UserId?.ToString() ?? "System",
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserService.UserId?.ToString() ?? "System",
+                CreatedAt = DateTime.UtcNow,
+                Description = content.Description,
+                Lang = key,
+                Name = content.Name,
+                Product = product,
+                ProductId = product.Id
+            };
+            _context.ProductDescriptions.Add(productDescription);
+            product.Descriptions.Add(productDescription);
         }
 
         // Update variations
