@@ -1,0 +1,45 @@
+﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore;
+using RestaurantSystem.Domain.Entities;
+
+namespace RestaurantSystem.Infrastructure.Persistence.Configurations;
+public class BasketItemConfiguration : IEntityTypeConfiguration<BasketItem>
+{
+    public void Configure(EntityTypeBuilder<BasketItem> builder)
+    {
+        builder.ToTable("BasketItems");
+
+        builder.Property(bi => bi.Quantity)
+            .IsRequired();
+
+        builder.Property(bi => bi.UnitPrice)
+            .HasColumnType("decimal(10,2)");
+
+        builder.Property(bi => bi.ItemTotal)
+            .HasColumnType("decimal(10,2)");
+
+        builder.Property(bi => bi.SpecialInstructions)
+            .HasMaxLength(500);
+
+        builder.HasIndex(bi => bi.BasketId);
+        builder.HasIndex(bi => new { bi.BasketId, bi.ProductId, bi.ProductVariationId });
+
+        // Relationship with product
+        builder.HasOne(bi => bi.Product)
+            .WithMany()
+            .HasForeignKey(bi => bi.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Relationship with product variation
+        builder.HasOne(bi => bi.ProductVariation)
+            .WithMany()
+            .HasForeignKey(bi => bi.ProductVariationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Relationship with side items
+        builder.HasMany(bi => bi.SideItems)
+            .WithOne(si => si.BasketItem)
+            .HasForeignKey(si => si.BasketItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

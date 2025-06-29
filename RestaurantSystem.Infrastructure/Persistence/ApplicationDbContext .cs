@@ -18,11 +18,19 @@ namespace RestaurantSystem.Infrastructure.Persistence
         // Product-related DbSets
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<ProductVariation> ProductVariations { get; set; }
         public DbSet<ProductSideItem> ProductSideItems { get; set; }
         public DbSet<DailyMenu> DailyMenus { get; set; }
-        public DbSet<DailyMenuProduct> DailyMenuProducts { get; set; }
+        public DbSet<DailyMenuItem> DailyMenuItems { get; set; }
+
+        // Basket-related
+
+        public DbSet<Basket> Baskets { get; set; }
+        public DbSet<BasketItem> BasketItems { get; set; }
+        public DbSet<BasketItemSideItem> BasketItemSideItems { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

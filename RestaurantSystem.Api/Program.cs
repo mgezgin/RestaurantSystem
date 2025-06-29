@@ -16,7 +16,10 @@ using RestaurantSystem.Api.Common.Middleware;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-
+using RestaurantSystem.Api.Features.Basket.Interfaces;
+using RestaurantSystem.Api.Features.Basket.Services;
+using RestaurantSystem.Api.Features.Auth.Handlers;
+using RestaurantSystem.Api.BackgroundServices;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -81,6 +84,12 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "RestaurantSystem";
+});
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -110,11 +119,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(opt =>
 .AddDefaultTokenProviders()
 .AddPasswordValidator<StrongPasswordValidator<ApplicationUser>>();
 
-
-
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 builder.Services.Configure<JwtSettings>(jwtSettings);
-
 
 var jwtOptions = jwtSettings.Get<JwtSettings>();
 if (jwtOptions != null)
@@ -124,7 +130,6 @@ if (jwtOptions != null)
 
 var secret = jwtSettings["Secret"];
 var key = Encoding.UTF8.GetBytes(secret!);
-
 
 builder.Services.AddAuthentication(options =>
 {
@@ -154,11 +159,7 @@ var emailSettings = builder.Configuration.GetSection("EmailSettings");
 builder.Services.Configure<EmailSettings>(emailSettings);
 
 builder.Services.AddFileStorage(builder.Configuration);
-
-
-
 builder.Services.AddAuthorization();
-
 
 builder.Services.AddInfrastructureRegistration();
 
@@ -176,6 +177,11 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IBasketService, BasketService>();
+builder.Services.AddScoped<IBasketMergeService, BasketMergeService>();
+builder.Services.AddScoped<LoginEventHandler>();
+
+builder.Services.AddHostedService<BasketCleanupService>();
 
 
 

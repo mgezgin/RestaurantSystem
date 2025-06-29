@@ -1,25 +1,28 @@
 ﻿using RestaurantSystem.Domain.Common.Enums;
+using RestaurantSystem.Domain.Entities;
 
 namespace RestaurantSystem.Api.Features.Products.Dtos;
 
-public class ProductDto
+public record ProductDto
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = null!;
-    public string? Description { get; set; }
-    public decimal BasePrice { get; set; }
-    public string? ImageUrl { get; set; }
-    public bool IsActive { get; set; }
-    public bool IsAvailable { get; set; }
-    public int PreparationTimeMinutes { get; set; }
-    public ProductType Type { get; set; }
-    public List<string> Ingredients { get; set; } = new();
-    public List<string> Allergens { get; set; } = new();
-    public int DisplayOrder { get; set; }
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public decimal BasePrice { get; init; }
+    public string? ImageUrl { get; init; } // Primary image URL for backward compatibility
+    public bool IsActive { get; init; }
+    public bool IsAvailable { get; init; }
+    public int PreparationTimeMinutes { get; init; }
+    public ProductType Type { get; init; }
+    public List<string> Ingredients { get; init; } = [];
+    public List<string> Allergens { get; init; } = [];
+    public int DisplayOrder { get; init; }
 
-    public List<ProductCategoryDto> Categories { get; set; } = new();
-    public CategoryDto? PrimaryCategory { get; set; }
-    public List<ProductVariationDto> Variations { get; set; } = new();
-    public List<SideItemDto> SuggestedSideItems { get; set; } = new();
+    public List<ProductImageDto> Images { get; init; } = [];
+    public List<ProductCategoryDto> Categories { get; init; } = [];
+    public CategoryDto? PrimaryCategory { get; init; }
+    public List<ProductVariationDto> Variations { get; init; } = [];
+    public List<SideItemDto> SuggestedSideItems { get; init; } = [];
+
 }
 

@@ -7,7 +7,7 @@ public class Product : SoftDeleteEntity
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public decimal BasePrice { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ImageUrl { get; init; } // Primary image URL for backward compatibility
     public bool IsActive { get; set; } = true;
     public bool IsAvailable { get; set; } = true;
     public int PreparationTimeMinutes { get; set; }
@@ -17,10 +17,11 @@ public class Product : SoftDeleteEntity
     public int DisplayOrder { get; set; }
 
     // Navigation properties
+    public virtual ICollection<ProductImage> Images { get; set; } = [];
     public virtual ICollection<ProductCategory> ProductCategories { get; set; } = new List<ProductCategory>();
     public virtual ICollection<ProductVariation> Variations { get; set; } = [];
     public virtual ICollection<ProductSideItem> SuggestedSideItems { get; set; } = [];
     public virtual ICollection<ProductSideItem> SideItemProducts { get; set; } = [];
-    public virtual ICollection<DailyMenuProduct> DailyMenuProducts { get; set; } = [];
+    public virtual ICollection<DailyMenuItem> DailyMenuProducts { get; set; } = [];
 
 }
