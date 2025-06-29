@@ -25,6 +25,13 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<DailyMenu> DailyMenus { get; set; }
         public DbSet<DailyMenuItem> DailyMenuItems { get; set; }
 
+        // Basket-related
+
+        public DbSet<Basket> Baskets { get; set; }
+        public DbSet<BasketItem> BasketItems { get; set; }
+        public DbSet<BasketItemSideItem> BasketItemSideItems { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
