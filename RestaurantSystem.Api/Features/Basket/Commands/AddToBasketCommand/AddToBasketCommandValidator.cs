@@ -19,14 +19,14 @@ public class AddToBasketCommandValidator : AbstractValidator<AddToBasketCommand>
         RuleFor(x => x.SpecialInstructions)
             .MaximumLength(500).WithMessage("Special instructions cannot exceed 500 characters");
 
-        RuleForEach(x => x.SideItems).ChildRules(sideItem =>
-        {
-            sideItem.RuleFor(si => si.SideItemProductId)
-                .NotEmpty().WithMessage("Side item product ID is required");
+        //RuleForEach(x => x.SideItems).ChildRules(sideItem =>
+        //{
+        //    sideItem.RuleFor(si => si.SideItemProductId)
+        //        .NotEmpty().WithMessage("Side item product ID is required");
 
-            sideItem.RuleFor(si => si.Quantity)
-                .GreaterThan(0).WithMessage("Side item quantity must be greater than 0")
-                .LessThanOrEqualTo(10).WithMessage("Side item quantity cannot exceed 10");
-        });
+        //    sideItem.RuleFor(si => si.Quantity)
+        //        .GreaterThan(0).WithMessage("Side item quantity must be greater than 0")
+        //        .LessThanOrEqualTo(10).WithMessage("Side item quantity cannot exceed 10");
+        //});
     }
 }

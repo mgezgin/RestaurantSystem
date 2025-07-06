@@ -23,14 +23,13 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<ProductVariation> ProductVariations { get; set; }
         public DbSet<ProductSideItem> ProductSideItems { get; set; }
         public DbSet<ProductDescription> ProductDescriptions { get; set; }
-        public DbSet<DailyMenu> DailyMenus { get; set; }
-        public DbSet<DailyMenuItem> DailyMenuItems { get; set; }
+        public DbSet<Menu> Menus { get; set; }
+        public DbSet<MenuItem> MenuItems { get; set; }
 
         // Basket-related
 
         public DbSet<Basket> Baskets { get; set; }
         public DbSet<BasketItem> BasketItems { get; set; }
-        public DbSet<BasketItemSideItem> BasketItemSideItems { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)

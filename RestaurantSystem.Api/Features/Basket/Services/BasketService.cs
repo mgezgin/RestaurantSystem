@@ -62,6 +62,31 @@ public class BasketService : IBasketService
 
     public async Task<BasketDto> AddItemToBasketAsync(string sessionId, Guid? userId, AddToBasketDto item)
     {
+
+        if(item.ProductId == Guid.Empty && item.MenuId ==Guid.Empty)
+        {
+            throw new InvalidOperationException("Product or Menu should be provided");
+        }
+
+        if(item.MenuId.HasValue && item.MenuId.Value != Guid.Empty)
+        {
+            var menu = await _context.Menus
+                .Include(m => m.MenuItems)
+                    .ThenInclude(mi => mi.Product)
+                .Include(m=>m.MenuItems)
+                    .ThenInclude (mi => mi.ProductVariation)
+                .FirstOrDefaultAsync(m => m.Id == item.MenuId && m.IsActive && !m.IsDeleted);
+
+            if (menu == null)
+                throw new InvalidOperationException("Menu not found or unavailable");
+
+            foreach (var menuItem in menu.MenuItems) 
+            {
+                // TODO: menu eklenirse o zaman calculation farkli olmasi lazim
+            }
+
+        }
+
         // Validate product exists and is available
         var product = await _context.Products
             .Include(p => p.Variations)
@@ -84,7 +109,6 @@ public class BasketService : IBasketService
 
         // Check if item already exists in basket
         var existingItem = await _context.BasketItems
-            .Include(bi => bi.SideItems)
             .FirstOrDefaultAsync(bi =>
                 bi.BasketId == basket.Id &&
                 bi.ProductId == item.ProductId &&
@@ -118,26 +142,6 @@ public class BasketService : IBasketService
             };
 
             // Add side items if any
-            if (item.SideItems?.Any() == true)
-            {
-                foreach (var sideItem in item.SideItems)
-                {
-                    var sideProduct = await _context.Products
-                        .FirstOrDefaultAsync(p => p.Id == sideItem.SideItemProductId);
-
-                    if (sideProduct != null)
-                    {
-                        basketItem.SideItems.Add(new BasketItemSideItem
-                        {
-                            SideItemProductId = sideItem.SideItemProductId,
-                            Quantity = sideItem.Quantity,
-                            UnitPrice = sideProduct.BasePrice,
-                            CreatedAt = DateTime.UtcNow,
-                            CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                        });
-                    }
-                }
-            }
 
             _context.BasketItems.Add(basketItem);
         }
@@ -179,7 +183,6 @@ public class BasketService : IBasketService
     {
         var basketItem = await _context.BasketItems
             .Include(bi => bi.Basket)
-            .Include(bi => bi.SideItems)
             .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.Basket.SessionId == sessionId);
 
         if (basketItem == null)
@@ -188,7 +191,6 @@ public class BasketService : IBasketService
         var basketId = basketItem.BasketId;
         var userId = basketItem.Basket.UserId;
 
-        _context.BasketItemSideItems.RemoveRange(basketItem.SideItems);
         _context.BasketItems.Remove(basketItem);
 
         await _context.SaveChangesAsync();
@@ -208,13 +210,11 @@ public class BasketService : IBasketService
 
         // Remove all items
         var items = await _context.BasketItems
-            .Include(bi => bi.SideItems)
             .Where(bi => bi.BasketId == basket.Id)
             .ToListAsync();
 
         foreach (var item in items)
         {
-            _context.BasketItemSideItems.RemoveRange(item.SideItems);
             _context.BasketItems.Remove(item);
         }
 
@@ -303,7 +303,6 @@ public class BasketService : IBasketService
 
         // Merge anonymous items into user basket
         var anonymousItems = await _context.BasketItems
-            .Include(bi => bi.SideItems)
             .Where(bi => bi.BasketId == anonymousBasket.Id)
             .ToListAsync();
 
@@ -349,7 +348,6 @@ public class BasketService : IBasketService
     {
         var basket = await _context.Baskets
             .Include(b => b.Items)
-                .ThenInclude(bi => bi.SideItems)
             .FirstOrDefaultAsync(b => b.Id == basketId);
 
         if (basket == null)
@@ -360,13 +358,6 @@ public class BasketService : IBasketService
         foreach (var item in basket.Items)
         {
             var itemTotal = item.ItemTotal;
-
-            // Add side items total
-            foreach (var sideItem in item.SideItems)
-            {
-                itemTotal += sideItem.Quantity * sideItem.UnitPrice;
-            }
-
             subTotal += itemTotal;
         }
 
@@ -409,8 +400,6 @@ public class BasketService : IBasketService
             .Include(b => b.Items)
                 .ThenInclude(bi => bi.ProductVariation)
             .Include(b => b.Items)
-                .ThenInclude(bi => bi.SideItems)
-                    .ThenInclude(si => si.SideItemProduct)
             .Where(b => !b.IsDeleted);
 
         if (userId.HasValue && userId.Value != Guid.Empty)
@@ -457,17 +446,7 @@ public class BasketService : IBasketService
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,
                 ItemTotal = item.ItemTotal,
-                SpecialInstructions = item.SpecialInstructions,
-                SideItems = item.SideItems.Select(si => new BasketItemSideItemDto
-                {
-                    Id = si.Id,
-                    SideItemProductId = si.SideItemProductId,
-                    SideItemName = si.SideItemProduct.Name,
-                    SideItemDescription = si.SideItemProduct.Description,
-                    Quantity = si.Quantity,
-                    UnitPrice = si.UnitPrice,
-                    Total = si.Quantity * si.UnitPrice
-                }).ToList()
+                SpecialInstructions = item.SpecialInstructions
             }).ToList()
         };
     }

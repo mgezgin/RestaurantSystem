@@ -36,10 +36,11 @@ public class BasketItemConfiguration : IEntityTypeConfiguration<BasketItem>
             .HasForeignKey(bi => bi.ProductVariationId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Relationship with side items
-        builder.HasMany(bi => bi.SideItems)
-            .WithOne(si => si.BasketItem)
-            .HasForeignKey(si => si.BasketItemId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(bi => bi.Menu)
+           .WithMany()
+           .HasForeignKey(bi => bi.MenuId)
+           .OnDelete(DeleteBehavior.Restrict);
+
+
     }
 }

@@ -1,13 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RestaurantSystem.Domain.Common;
 using RestaurantSystem.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestaurantSystem.Infrastructure.Persistence.Configurations;
 public class ProductConfiguration : IEntityTypeConfiguration<Product>
@@ -76,7 +69,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .WithOne()
             .HasForeignKey("ProductId");
 
-        builder.HasMany(p => p.DailyMenuProducts)
+        builder.HasMany(p => p.MenuProducts)
             .WithOne()
             .HasForeignKey("ProductId");
 

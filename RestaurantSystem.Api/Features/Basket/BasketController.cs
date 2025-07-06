@@ -78,9 +78,9 @@ public class BasketController : ControllerBase
             sessionId,
             request.ProductId,
             request.ProductVariationId,
+            request.MenuId,
             request.Quantity,
-            request.SpecialInstructions,
-            request.SideItems);
+            request.SpecialInstructions);
 
         var result = await _mediator.SendCommand(command);
         return Ok(result);
