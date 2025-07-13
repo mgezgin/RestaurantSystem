@@ -62,9 +62,11 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var searchLower = query.Search.ToLower();
-            productsQuery = productsQuery.Where(p =>
-                p.Name.ToLower().Contains(searchLower) ||
-                p.Description != null && p.Description.ToLower().Contains(searchLower));
+
+            productsQuery = productsQuery.Where(p=>p.Name.ToLower().Contains(searchLower) || p.Descriptions.Any(c => c.Name.ToLower().Contains(searchLower)));
+            //productsQuery = productsQuery.Where(p =>
+            //    p.Name.ToLower().Contains(searchLower) ||
+            //    p.Description != null && p.Description.ToLower().Contains(searchLower));
         }
 
         // Get total count
