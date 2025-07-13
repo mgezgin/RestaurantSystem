@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Domain.Common;
 
 namespace RestaurantSystem.Api.Features.Auth.Commands.ForgotPasswordCommand;
@@ -11,11 +12,14 @@ public class ForgotPasswordCommandHandler : ICommandHandler<ForgotPasswordComman
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<ForgotPasswordCommandHandler> _logger;
+    private readonly IEmailService _emailService;
 
-    public ForgotPasswordCommandHandler(UserManager<ApplicationUser> userManager, ILogger<ForgotPasswordCommandHandler> logger)
+
+    public ForgotPasswordCommandHandler(UserManager<ApplicationUser> userManager, ILogger<ForgotPasswordCommandHandler> logger,IEmailService emailService)
     {
         _userManager = userManager;
         _logger = logger;
+        _emailService = emailService;
     }
 
     public async Task<ApiResponse<string>> Handle(ForgotPasswordCommand command, CancellationToken cancellationToken)
@@ -38,7 +42,7 @@ public class ForgotPasswordCommandHandler : ICommandHandler<ForgotPasswordComman
         _logger.LogInformation("Password reset token for {Email}: {Token}", command.Email, token);
 
         // TODO: Replace this with actual email sending
-        // await _emailService.SendPasswordResetEmailAsync(user.Email, token);
+        await _emailService.SendPasswordResetEmailAsync(user, token);
 
         return ApiResponse<string>.SuccessWithData(
             "If the email exists in our system, a password reset link has been sent.",

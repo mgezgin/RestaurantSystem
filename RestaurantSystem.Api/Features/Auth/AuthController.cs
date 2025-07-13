@@ -27,39 +27,6 @@ public class AuthController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>
-    /// Get all users with optional filters
-    /// </summary>
-    [HttpGet]
-    [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<PagedResult<UserDto>>>> GetUsers(
-        [FromQuery] GetUsersQuery query)
-    {
-        var result = await _mediator.SendQuery(query);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Register a new customer (public registration)
-    /// </summary>
-    [HttpPost("register/customer")]
-    [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterCustomer([FromBody] RegisterCustomerCommand command)
-    {
-        var result = await _mediator.SendCommand(command);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Register a new user with specific role (admin only)
-    /// </summary>
-    [HttpPost("register/staff")]
-    [RequireAdmin]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterUser([FromBody] RegisterUserCommand command)
-    {
-        var result = await _mediator.SendCommand(command);
-        return Ok(result);
-    }
 
     /// <summary>
     /// User login

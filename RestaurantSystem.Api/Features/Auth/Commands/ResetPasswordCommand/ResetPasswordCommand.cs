@@ -1,14 +1,15 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Domain.Common;
+using System.Text;
 
 namespace RestaurantSystem.Api.Features.Auth.Commands.ResetPasswordCommand;
 
 public record ResetPasswordCommand(
     string Email,
-    string Token,
     string NewPassword,
     string ConfirmPassword) : ICommand<ApiResponse<string>>;
 
@@ -38,7 +39,10 @@ public class ResetPasswordCommandHandler : ICommandHandler<ResetPasswordCommand,
             return ApiResponse<string>.Failure("Invalid reset request", "Password reset failed");
         }
 
-        var result = await _userManager.ResetPasswordAsync(user, command.Token, command.NewPassword);
+
+        string resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        var result = await _userManager.ResetPasswordAsync(user, resetToken, command.NewPassword);
 
         if (!result.Succeeded)
         {
