@@ -29,6 +29,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApiRegistration();
 
+builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile("app-secrets.json", optional: false, reloadOnChange: true);
+
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -95,7 +99,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsqlOptions => npgsqlOptions
             .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.GetName().Name)
-            .EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null)
             .CommandTimeout(30)
     ));
 

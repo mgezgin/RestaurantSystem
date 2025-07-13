@@ -51,145 +51,159 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
 
     public async Task<ApiResponse<ProductDto>> Handle(CreateProductCommand command, CancellationToken cancellationToken)
     {
-        var categories = await _context.Categories
-        .Where(c => command.CategoryIds.Contains(c.Id))
-        .ToListAsync(cancellationToken);
 
-        // Validate primary category
-        if (command.PrimaryCategoryId.HasValue && !command.CategoryIds.Contains(command.PrimaryCategoryId.Value))
+        using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
         {
-            return ApiResponse<ProductDto>.Failure("Primary category must be one of the selected categories");
-        }
+            var categories = await _context.Categories
+       .Where(c => command.CategoryIds.Contains(c.Id))
+       .ToListAsync(cancellationToken);
 
-        if (command.SuggestedSideItemIds?.Any() == true)
-        {
-            var sideItemsExist = await _context.Products
-                .Where(p => command.SuggestedSideItemIds.Contains(p.Id) && p.Type == ProductType.SideItem)
-                .CountAsync(cancellationToken) == command.SuggestedSideItemIds.Count;
-
-            if (!sideItemsExist)
+            // Validate primary category
+            if (command.PrimaryCategoryId.HasValue && !command.CategoryIds.Contains(command.PrimaryCategoryId.Value))
             {
-                return ApiResponse<ProductDto>.Failure("One or more suggested side items not found or not side items");
+                return ApiResponse<ProductDto>.Failure("Primary category must be one of the selected categories");
             }
-        }
 
-
-
-        var product = new Product
-        {
-            Name = command.Name,
-            Description = command.Description,
-            BasePrice = command.BasePrice,
-            IsActive = command.IsActive,
-            IsAvailable = command.IsAvailable,
-            PreparationTimeMinutes = command.PreparationTimeMinutes,
-            Type = command.Type,
-            Ingredients = command.Ingredients.Any()
-              ? System.Text.Json.JsonSerializer.Serialize(command.Ingredients)
-              : null,
-            Allergens = command.Allergens.Any()
-              ? System.Text.Json.JsonSerializer.Serialize(command.Allergens)
-              : null,
-            DisplayOrder = command.DisplayOrder,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-        };
-
-        _context.Products.Add(product);
-
-        var displayOrder = 0;
-
-        foreach (var categoryId in command.CategoryIds)
-        {
-            var productCategory = new ProductCategory
+            if (command.SuggestedSideItemIds?.Any() == true)
             {
-                ProductId = product.Id,
-                CategoryId = categoryId,
-                IsPrimary = categoryId == command.PrimaryCategoryId,
-                DisplayOrder = displayOrder++,
+                var sideItemsExist = await _context.Products
+                    .Where(p => command.SuggestedSideItemIds.Contains(p.Id) && p.Type == ProductType.SideItem)
+                    .CountAsync(cancellationToken) == command.SuggestedSideItemIds.Count;
+
+                if (!sideItemsExist)
+                {
+                    return ApiResponse<ProductDto>.Failure("One or more suggested side items not found or not side items");
+                }
+            }
+
+            var product = new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = command.Name,
+                Description = command.Description,
+                BasePrice = command.BasePrice,
+                IsActive = command.IsActive,
+                IsAvailable = command.IsAvailable,
+                PreparationTimeMinutes = command.PreparationTimeMinutes,
+                Type = command.Type,
+                Ingredients = command.Ingredients.Any()
+                  ? System.Text.Json.JsonSerializer.Serialize(command.Ingredients)
+                  : null,
+                Allergens = command.Allergens.Any()
+                  ? System.Text.Json.JsonSerializer.Serialize(command.Allergens)
+                  : null,
+                DisplayOrder = command.DisplayOrder,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
             };
-            _context.ProductCategories.Add(productCategory);
-        }
 
-        foreach (var (languageCode, description) in command.Content)
-        {
+            _context.Products.Add(product);
 
-            var isAny = await _context.ProductDescriptions.AnyAsync(x => string.Equals(languageCode, x.Lang, StringComparison.InvariantCulture));
+            var displayOrder = 0;
 
-            if (isAny)
+            foreach (var categoryId in command.CategoryIds)
             {
-                return ApiResponse<ProductDto>.Failure($"language {languageCode} used more than one");
-            }
-
-            var productDescription = new ProductDescription
-            {
-                ProductId = product.Id,
-                Lang = languageCode,
-                Name = description.Name,
-                Description = description.Description,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-            };
-            _context.ProductDescriptions.Add(productDescription);
-            product.Descriptions.Add(productDescription);
-        }
-
-        if (command.Variations?.Any() == true)
-        {
-            foreach (var variationDto in command.Variations)
-            {
-                var variation = new ProductVariation
+                var productCategory = new ProductCategory
                 {
-                    ProductId = product.Id,
-                    Name = variationDto.Name,
-                    Description = variationDto.Description,
-                    PriceModifier = variationDto.PriceModifier,
-                    IsActive = variationDto.IsActive,
-                    DisplayOrder = variationDto.DisplayOrder,
+                    CategoryId = categoryId,
+                    IsPrimary = categoryId == command.PrimaryCategoryId,
+                    DisplayOrder = displayOrder++,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
-                _context.ProductVariations.Add(variation);
-                product.Variations.Add(variation);
+                _context.ProductCategories.Add(productCategory);
+                product.ProductCategories.Add(productCategory);
             }
-        }
 
-        if (command.SuggestedSideItemIds?.Any() == true)
-        {
-            var sideItemDisplayOrder = 0;
-            foreach (var sideItemId in command.SuggestedSideItemIds)
+            foreach (var (languageCode, description) in command.Content)
             {
-                var productSideItem = new ProductSideItem
+
+                var isAny = await _context.ProductDescriptions.AnyAsync(x => string.Equals(languageCode, x.Lang));
+
+                if (isAny)
                 {
-                    MainProductId = product.Id,
-                    SideItemProductId = sideItemId,
-                    IsRequired = false,
-                    DisplayOrder = sideItemDisplayOrder++,
+                    return ApiResponse<ProductDto>.Failure($"language {languageCode} used more than one");
+                }
+
+                var productDescription = new ProductDescription
+                {
+                    Lang = languageCode,
+                    Name = description.Name,
+                    Description = description.Description,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
-                _context.ProductSideItems.Add(productSideItem);
+                _context.ProductDescriptions.Add(productDescription);
+                product.Descriptions.Add(productDescription);
             }
+
+            if (command.Variations?.Any() == true)
+            {
+                foreach (var variationDto in command.Variations)
+                {
+                    var variation = new ProductVariation
+                    {
+                        Name = variationDto.Name,
+                        Description = variationDto.Description,
+                        PriceModifier = variationDto.PriceModifier,
+                        IsActive = variationDto.IsActive,
+                        DisplayOrder = variationDto.DisplayOrder,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+                    _context.ProductVariations.Add(variation);
+                    product.Variations.Add(variation);
+                }
+            }
+
+            if (command.SuggestedSideItemIds?.Any() == true)
+            {
+                var sideItemDisplayOrder = 0;
+                foreach (var sideItemId in command.SuggestedSideItemIds)
+                {
+                    var productSideItem = new ProductSideItem
+                    {
+                        MainProductId = product.Id,
+                        SideItemProductId = sideItemId,
+                        IsRequired = false,
+                        DisplayOrder = sideItemDisplayOrder++,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+                    _context.ProductSideItems.Add(productSideItem);
+                    product.SuggestedSideItems.Add(productSideItem);
+                }
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+
+            var createdProduct = await _context.Products
+                .Include(p => p.ProductCategories)
+                    .ThenInclude(pc => pc.Category)
+                .Include(p => p.Variations)
+                .Include(p => p.SuggestedSideItems)
+                    .ThenInclude(si => si.SideItemProduct)
+                .FirstAsync(p => p.Id == product.Id, cancellationToken);
+
+            var productDto = MapToProductDto(createdProduct);
+
+            _logger.LogInformation("Product {ProductId} created successfully by user {UserId}",
+                    product.Id, _currentUserService.UserId);
+
+            return ApiResponse<ProductDto>.SuccessWithData(productDto, "Product created successfully");
+
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
-
-        var createdProduct = await _context.Products
-            .Include(p => p.ProductCategories)
-                .ThenInclude(pc => pc.Category)
-            .Include(p => p.Variations)
-            .Include(p => p.SuggestedSideItems)
-                .ThenInclude(si => si.SideItemProduct)
-            .FirstAsync(p => p.Id == product.Id, cancellationToken);
-
-        var productDto = MapToProductDto(createdProduct);
-
-        _logger.LogInformation("Product {ProductId} created successfully by user {UserId}",
-                product.Id, _currentUserService.UserId);
-
-        return ApiResponse<ProductDto>.SuccessWithData(productDto, "Product created successfully");
+       
     }
 
     private static ProductDto MapToProductDto(Product product)

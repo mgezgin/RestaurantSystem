@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
@@ -13,6 +12,7 @@ using RestaurantSystem.Api.Features.Auth.Commands.ResetPasswordCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.SendEmailVerificationCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.VerifyEmailCommand;
 using RestaurantSystem.Api.Features.Auth.Dtos;
+using RestaurantSystem.Api.Features.Auth.Queries.GetUsersQuery;
 
 namespace RestaurantSystem.Api.Features.Auth;
 
@@ -25,6 +25,18 @@ public class AuthController : ControllerBase
     public AuthController(CustomMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    /// <summary>
+    /// Get all users with optional filters
+    /// </summary>
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<PagedResult<UserDto>>>> GetUsers(
+        [FromQuery] GetUsersQuery query)
+    {
+        var result = await _mediator.SendQuery(query);
+        return Ok(result);
     }
 
     /// <summary>

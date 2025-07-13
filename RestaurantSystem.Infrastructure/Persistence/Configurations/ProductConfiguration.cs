@@ -57,20 +57,20 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         // Configure other relationships (optional, if needed)
         builder.HasMany(p => p.Images)
-            .WithOne()
+            .WithOne(p=>p.Product)
             .HasForeignKey("ProductId")
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(p => p.ProductCategories)
-            .WithOne()
+            .WithOne(p => p.Product)
             .HasForeignKey("ProductId");
 
         builder.HasMany(p => p.Variations)
-            .WithOne()
+            .WithOne(p=>p.Product)
             .HasForeignKey("ProductId");
 
         builder.HasMany(p => p.MenuProducts)
-            .WithOne()
+            .WithOne(p => p.Product)
             .HasForeignKey("ProductId");
 
     }

@@ -249,7 +249,7 @@ Best regards,
 The Restaurant System Team
 
 This is an automated message, please do not reply to this email.
-© 2024 Restaurant System. All rights reserved.";
+© {DateTime.Now.Year} Restaurant System. All rights reserved.";
         }
     }
 

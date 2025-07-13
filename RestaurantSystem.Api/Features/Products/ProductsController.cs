@@ -15,7 +15,6 @@ using RestaurantSystem.Api.Features.Products.Dtos.Requests;
 using RestaurantSystem.Api.Features.Products.Queries.GetProductByIdQuery;
 using RestaurantSystem.Api.Features.Products.Queries.GetProductImagesQuery;
 using RestaurantSystem.Api.Features.Products.Queries.GetProductsQuery;
-using RestaurantSystem.Domain.Common.Enums;
 
 namespace RestaurantSystem.Api.Features.Products;
 [ApiController]
@@ -135,7 +134,6 @@ public class ProductsController : ControllerBase
     /// </summary>
     [HttpPost("{id}/images/bulk")]
     [Consumes("multipart/form-data")]
-    [RequireAdmin]
     public async Task<ActionResult<ApiResponse<List<ProductImageDto>>>> UploadMultipleProductImages(
         Guid id,
         [FromForm] UploadMultipleProductImagesDto request)

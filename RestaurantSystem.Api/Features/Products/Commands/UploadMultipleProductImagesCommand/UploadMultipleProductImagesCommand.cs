@@ -104,10 +104,20 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
                 try
                 {
                     // Upload image
-                    var imageUrl = await _fileStorageService.UploadFileAsync(
-                        image,
-                        $"products/{command.ProductId}",
-                        cancellationToken: cancellationToken);
+                    string imageUrl;
+                    try
+                    {
+                        imageUrl = await _fileStorageService.UploadFileAsync(
+                           image,
+                           $"products/{command.ProductId}",
+                           cancellationToken: cancellationToken);
+
+                    }
+                    catch(Exception ex)
+                    {
+                        throw ex;
+
+                    }
 
                     // Create image record
                     var productImage = new ProductImage
