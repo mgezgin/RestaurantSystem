@@ -35,4 +35,8 @@
 		<ProjectReference Include="..\RestaurantSystem.Infrastructure\RestaurantSystem.Infrastructure.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Features\Auth\Queries\" />
+	</ItemGroup>
+
 </Project>

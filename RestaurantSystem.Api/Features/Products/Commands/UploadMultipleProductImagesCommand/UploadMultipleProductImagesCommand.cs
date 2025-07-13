@@ -113,9 +113,9 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
                            cancellationToken: cancellationToken);
 
                     }
-                    catch(Exception ex)
+                    catch
                     {
-                        throw ex;
+                        throw;
 
                     }
 

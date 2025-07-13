@@ -1,6 +1,6 @@
 ﻿using RestaurantSystem.Domain.Common.Enums;
 
-namespace RestaurantSystem.Api.Features.Auth.Dtos;
+namespace RestaurantSystem.Api.Features.User.Dtos;
 
 public class UserDto
 {

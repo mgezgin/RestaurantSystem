@@ -1,7 +1,7 @@
 ﻿
 using FluentValidation;
 
-namespace RestaurantSystem.Api.Features.Auth.Commands.RegisterCustomerCommand;
+namespace RestaurantSystem.Api.Features.User.Commands.RegisterCustomerCommand;
 
 public class RegisterCustomerCommandValidator : AbstractValidator<RegisterCustomerCommand>
 {

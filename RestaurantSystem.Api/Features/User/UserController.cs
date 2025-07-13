@@ -1,15 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
-using RestaurantSystem.Api.Features.Auth.Commands.RegisterCustomerCommand;
-using RestaurantSystem.Api.Features.Auth.Commands.RegisterUserCommand;
 using RestaurantSystem.Api.Features.Auth.Dtos;
-using RestaurantSystem.Api.Features.Auth.Queries.GetUsersQuery;
+using RestaurantSystem.Api.Features.User.Commands.DeleteUserCommand;
+using RestaurantSystem.Api.Features.User.Commands.RegisterCustomerCommand;
+using RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
+using RestaurantSystem.Api.Features.User.Dtos;
+using RestaurantSystem.Api.Features.User.Queries.GetUsersQuery;
 
-namespace RestaurantSystem.Api.Features.Auth;
+namespace RestaurantSystem.Api.Features.User;
 [Route("api/[controller]")]
 [ApiController]
 public class UserController : ControllerBase
@@ -50,6 +51,17 @@ public class UserController : ControllerBase
     [HttpPost("register/staff")]
     [RequireAdmin]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterUser([FromBody] RegisterUserCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Register a new user with specific role (admin only)
+    /// </summary>
+    [HttpDelete("delete/user")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<string>>> DeleteUser([FromBody] DeleteUserCommand command)
     {
         var result = await _mediator.SendCommand(command);
         return Ok(result);

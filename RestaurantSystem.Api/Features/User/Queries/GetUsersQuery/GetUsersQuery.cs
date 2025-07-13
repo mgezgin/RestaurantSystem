@@ -1,12 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
-using RestaurantSystem.Api.Features.Auth.Commands.RegisterUserCommand;
-using RestaurantSystem.Api.Features.Auth.Dtos;
+using RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
+using RestaurantSystem.Api.Features.User.Dtos;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 
-namespace RestaurantSystem.Api.Features.Auth.Queries.GetUsersQuery;
+namespace RestaurantSystem.Api.Features.User.Queries.GetUsersQuery;
 
 public record GetUsersQuery(
     UserRole? Role,

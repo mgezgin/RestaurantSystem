@@ -6,13 +6,10 @@ using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Auth.Commands.ForgotPasswordCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.LoginCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.RefreshTokenCommand;
-using RestaurantSystem.Api.Features.Auth.Commands.RegisterCustomerCommand;
-using RestaurantSystem.Api.Features.Auth.Commands.RegisterUserCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.ResetPasswordCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.SendEmailVerificationCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.VerifyEmailCommand;
 using RestaurantSystem.Api.Features.Auth.Dtos;
-using RestaurantSystem.Api.Features.Auth.Queries.GetUsersQuery;
 
 namespace RestaurantSystem.Api.Features.Auth;
 

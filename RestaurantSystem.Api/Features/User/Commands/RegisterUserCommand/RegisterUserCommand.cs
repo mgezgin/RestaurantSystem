@@ -3,39 +3,50 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Auth.Dtos;
-using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Common;
+using RestaurantSystem.Domain.Common.Enums;
 
-namespace RestaurantSystem.Api.Features.Auth.Commands.RegisterCustomerCommand;
+namespace RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
 
-public record RegisterCustomerCommand(
+public record RegisterUserCommand(
     string FirstName,
     string LastName,
     string Email,
     string Password,
-    string ConfirmPassword) : ICommand<ApiResponse<AuthResponse>>;
+    string ConfirmPassword,
+    UserRole Role) : ICommand<ApiResponse<AuthResponse>>;
 
-public class RegisterCustomerCommandHandler : ICommandHandler<RegisterCustomerCommand, ApiResponse<AuthResponse>>
+public class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand, ApiResponse<AuthResponse>>
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
-    private readonly ILogger<RegisterCustomerCommandHandler> _logger;
+    private readonly ILogger<RegisterUserCommandHandler> _logger;
 
-    public RegisterCustomerCommandHandler(
+    public RegisterUserCommandHandler(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
+        ICurrentUserService currentUserService,
         IEmailService emailService,
-        ILogger<RegisterCustomerCommandHandler> logger)
+        ILogger<RegisterUserCommandHandler> logger)
     {
         _userManager = userManager;
         _tokenService = tokenService;
+        _currentUserService = currentUserService;
         _emailService = emailService;
         _logger = logger;
     }
 
-    public async Task<ApiResponse<AuthResponse>> Handle(RegisterCustomerCommand command, CancellationToken cancellationToken)
+    public async Task<ApiResponse<AuthResponse>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
     {
+        // Check if current user is admin (this endpoint should be admin-only)
+        var currentUser = await _currentUserService.GetUserAsync();
+        if (currentUser == null || currentUser.Role != UserRole.Admin)
+        {
+            return ApiResponse<AuthResponse>.Failure("Unauthorized access", "Only administrators can register users with roles");
+        }
+
         // Check if user already exists
         var existingUser = await _userManager.FindByEmailAsync(command.Email);
         if (existingUser != null)
@@ -43,16 +54,16 @@ public class RegisterCustomerCommandHandler : ICommandHandler<RegisterCustomerCo
             return ApiResponse<AuthResponse>.Failure("User with this email already exists", "Registration failed");
         }
 
-        // Create new customer user
+        // Create new user
         var newUser = new ApplicationUser
         {
             Email = command.Email,
             UserName = command.Email,
             FirstName = command.FirstName,
             LastName = command.LastName,
-            Role = UserRole.Customer, // Always customer for public registration
+            Role = command.Role,
             CreatedAt = DateTime.UtcNow,
-            CreatedBy = "System",
+            CreatedBy = currentUser.Id.ToString(),
             RefreshToken = _tokenService.GenerateRefreshToken()
         };
 
@@ -61,7 +72,7 @@ public class RegisterCustomerCommandHandler : ICommandHandler<RegisterCustomerCo
         if (!result.Succeeded)
         {
             var errors = result.Errors.Select(e => e.Description).ToList();
-            _logger.LogWarning("Customer registration failed for email {Email}: {Errors}", command.Email, string.Join(", ", errors));
+            _logger.LogWarning("User registration failed for email {Email}: {Errors}", command.Email, string.Join(", ", errors));
             return ApiResponse<AuthResponse>.Failure(errors, "Failed to create user");
         }
 
@@ -81,7 +92,8 @@ public class RegisterCustomerCommandHandler : ICommandHandler<RegisterCustomerCo
             // Don't fail the registration if email sending fails
         }
 
-        _logger.LogInformation("Customer {UserId} successfully registered", newUser.Id);
+        _logger.LogInformation("User {UserId} successfully registered by admin {AdminId} with role {Role}",
+            newUser.Id, currentUser.Id, command.Role);
 
         // Return response
         var authResponse = new AuthResponse
@@ -96,6 +108,6 @@ public class RegisterCustomerCommandHandler : ICommandHandler<RegisterCustomerCo
             Expiration = _tokenService.GetAccessTokenExpiration()
         };
 
-        return ApiResponse<AuthResponse>.SuccessWithData(authResponse, "Customer registered successfully");
+        return ApiResponse<AuthResponse>.SuccessWithData(authResponse, $"User registered successfully with role {command.Role}");
     }
 }
