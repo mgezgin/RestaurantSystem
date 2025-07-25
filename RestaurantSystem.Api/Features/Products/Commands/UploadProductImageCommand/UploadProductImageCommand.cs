@@ -25,6 +25,7 @@ public class UploadProductImageCommandHandler : ICommandHandler<UploadProductIma
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<UploadProductImageCommandHandler> _logger;
     private readonly IConfiguration _configuration;
+    private readonly string _baseUrl;
 
     public UploadProductImageCommandHandler(
         ApplicationDbContext context,
@@ -38,6 +39,7 @@ public class UploadProductImageCommandHandler : ICommandHandler<UploadProductIma
         _currentUserService = currentUserService;
         _logger = logger;
         _configuration = configuration;
+        _baseUrl = configuration["AWS:S3:BaseUrl"]!;
     }
 
     public async Task<ApiResponse<ProductImageDto>> Handle(UploadProductImageCommand command, CancellationToken cancellationToken)
@@ -119,7 +121,7 @@ public class UploadProductImageCommandHandler : ICommandHandler<UploadProductIma
 
             var responseDto = new ProductImageDto
             {
-                Url = productImage.Url,
+                Url = _baseUrl + "/" + productImage.Url,
                 AltText = productImage.AltText,
                 IsPrimary = productImage.IsPrimary,
                 SortOrder = productImage.SortOrder,

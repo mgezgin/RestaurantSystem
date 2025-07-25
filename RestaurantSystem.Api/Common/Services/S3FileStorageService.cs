@@ -51,7 +51,7 @@ public class S3FileStorageService : IFileStorageService
         try
         {
             var response = await _s3Client.PutObjectAsync(request, cancellationToken);
-            return $"{_baseUrl.TrimEnd('/')}/{key}";
+            return $"{key}";
         }
         catch (Exception ex)
         {
