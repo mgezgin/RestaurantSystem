@@ -20,6 +20,7 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<UploadMultipleProductImagesCommandHandler> _logger;
     private readonly IConfiguration _configuration;
+    private readonly string _baseUrl;
 
     public UploadMultipleProductImagesCommandHandler(
         ApplicationDbContext context,
@@ -33,6 +34,7 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
         _currentUserService = currentUserService;
         _logger = logger;
         _configuration = configuration;
+        _baseUrl = configuration["AWS:S3:BaseUrl"]!;
     }
 
     public async Task<ApiResponse<List<ProductImageDto>>> Handle(UploadMultipleProductImagesCommand command, CancellationToken cancellationToken)
@@ -135,7 +137,7 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
 
                     uploadedImages.Add(new ProductImageDto
                     {
-                        Url = productImage.Url,
+                        Url = _baseUrl + "/" + productImage.Url,
                         AltText = productImage.AltText,
                         IsPrimary = productImage.IsPrimary,
                         SortOrder = productImage.SortOrder,
