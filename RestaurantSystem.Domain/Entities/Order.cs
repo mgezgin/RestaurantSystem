@@ -1,8 +1,9 @@
 ﻿using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Common;
+using RestaurantSystem.Domain.Common.Base;
 
 namespace RestaurantSystem.Domain.Entities;
-public class Order
+public class Order : SoftDeleteEntity
 {
     public string OrderNumber { get; set; } = null!;
     public Guid? UserId { get; set; }
