@@ -9,7 +9,7 @@ namespace RestaurantSystem.Api.Features.Basket.Commands.AddToBasketCommand;
 
 public record AddToBasketCommand(
     string SessionId,
-    Guid? ProductId,
+    Guid ProductId,
     Guid? ProductVariationId,
     Guid? MenuId,
     int Quantity,
