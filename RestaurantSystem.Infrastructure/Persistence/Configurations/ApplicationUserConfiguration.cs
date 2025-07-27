@@ -43,6 +43,14 @@ namespace RestaurantSystem.Infrastructure.Persistence.Configurations
             builder.HasIndex(u => new { u.NormalizedEmail, u.IsDeleted })
                 .IsUnique()
                 .HasFilter("\"is_deleted\" = false");
+            
+            builder.Property(r => r.OrderLimitAmount)
+            .HasColumnType("decimal(10,2)");
+
+            builder.Property(r => r.DiscountPercentage)
+                .HasColumnType("decimal(5,2)");
+
+
         }
     }
 }

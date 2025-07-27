@@ -68,7 +68,9 @@ public class BasketService : IBasketService
             throw new InvalidOperationException("Product or Menu should be provided");
         }
 
-        if(item.MenuId.HasValue && item.MenuId.Value != Guid.Empty)
+       var basket = await GetOrCreateBasketAsync(sessionId, userId);
+
+        if (item.MenuId.HasValue && item.MenuId.Value != Guid.Empty)
         {
             var menu = await _context.Menus
                 .Include(m => m.MenuItems)
@@ -80,70 +82,115 @@ public class BasketService : IBasketService
             if (menu == null)
                 throw new InvalidOperationException("Menu not found or unavailable");
 
-            foreach (var menuItem in menu.MenuItems) 
+            decimal menuPrice = 0;
+
+            foreach (var menuItem in menu.MenuItems)
             {
-                // TODO: menu eklenirse o zaman calculation farkli olmasi lazim
+                if (menuItem.SpecialPrice.HasValue)
+                {
+                    // Use special price if available
+                    menuPrice += menuItem.SpecialPrice.Value;
+                }
+                else
+                {
+                    // Use product base price + variation modifier
+                    var itemPrice = menuItem.Product.BasePrice;
+                    if (menuItem.ProductVariation != null)
+                    {
+                        itemPrice += menuItem.ProductVariation.PriceModifier;
+                    }
+                    menuPrice += itemPrice;
+                }
             }
 
-        }
+            // Check if menu already exists in basket
+            var existingMenuItem = await _context.BasketItems
+                .FirstOrDefaultAsync(bi =>
+                    bi.BasketId == basket.Id &&
+                    bi.MenuId == item.MenuId);
 
-        // Validate product exists and is available
-        var product = await _context.Products
-            .Include(p => p.Variations)
-            .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.IsActive && p.IsAvailable);
-
-        if (product == null)
-            throw new InvalidOperationException("Product not found or unavailable");
-
-        // Validate variation if specified
-        ProductVariation? variation = null;
-        if (item.ProductVariationId.HasValue)
-        {
-            variation = product.Variations.FirstOrDefault(v => v.Id == item.ProductVariationId.Value && v.IsActive);
-            if (variation == null)
-                throw new InvalidOperationException("Product variation not found or unavailable");
-        }
-
-        // Get or create basket
-        var basket = await GetOrCreateBasketAsync(sessionId, userId);
-
-        // Check if item already exists in basket
-        var existingItem = await _context.BasketItems
-            .FirstOrDefaultAsync(bi =>
-                bi.BasketId == basket.Id &&
-                bi.ProductId == item.ProductId &&
-                bi.ProductVariationId == item.ProductVariationId);
-
-        if (existingItem != null)
-        {
-            // Update quantity
-            existingItem.Quantity += item.Quantity;
-            existingItem.ItemTotal = existingItem.Quantity * existingItem.UnitPrice;
-            existingItem.UpdatedAt = DateTime.UtcNow;
-            existingItem.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
-        }
-        else
-        {
-            // Calculate unit price
-            var unitPrice = product.BasePrice + (variation?.PriceModifier ?? 0);
-
-            // Create new basket item
-            var basketItem = new BasketItem
+            if (existingMenuItem != null)
             {
-                BasketId = basket.Id,
-                ProductId = item.ProductId,
-                ProductVariationId = item.ProductVariationId,
-                Quantity = item.Quantity,
-                UnitPrice = unitPrice,
-                ItemTotal = unitPrice * item.Quantity,
-                SpecialInstructions = item.SpecialInstructions,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-            };
+                // Update quantity
+                existingMenuItem.Quantity += item.Quantity;
+                existingMenuItem.ItemTotal = existingMenuItem.Quantity * existingMenuItem.UnitPrice;
+                existingMenuItem.UpdatedAt = DateTime.UtcNow;
+                existingMenuItem.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
+            }
+            else
+            {
+                // Create new basket item for menu
+                var basketItem = new BasketItem
+                {
+                    BasketId = basket.Id,
+                    MenuId = item.MenuId,
+                    Quantity = item.Quantity,
+                    UnitPrice = menuPrice,
+                    ItemTotal = menuPrice * item.Quantity,
+                    SpecialInstructions = item.SpecialInstructions,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
 
-            // Add side items if any
+                _context.BasketItems.Add(basketItem);
+            }
+        }else if(item.ProductId != Guid.Empty)
+        {
+            // Validate product exists and is available
+            var product = await _context.Products
+                .Include(p => p.Variations)
+                .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.IsActive && p.IsAvailable);
 
-            _context.BasketItems.Add(basketItem);
+            if (product == null)
+                throw new InvalidOperationException("Product not found or unavailable");
+
+            // Validate variation if specified
+            ProductVariation? variation = null;
+            if (item.ProductVariationId.HasValue)
+            {
+                variation = product.Variations.FirstOrDefault(v => v.Id == item.ProductVariationId.Value && v.IsActive);
+                if (variation == null)
+                    throw new InvalidOperationException("Product variation not found or unavailable");
+            }
+
+            // Check if item already exists in basket
+            var existingItem = await _context.BasketItems
+                .FirstOrDefaultAsync(bi =>
+                    bi.BasketId == basket.Id &&
+                    bi.ProductId == item.ProductId &&
+                    bi.ProductVariationId == item.ProductVariationId);
+
+            if (existingItem != null)
+            {
+                // Update quantity
+                existingItem.Quantity += item.Quantity;
+                existingItem.ItemTotal = existingItem.Quantity * existingItem.UnitPrice;
+                existingItem.UpdatedAt = DateTime.UtcNow;
+                existingItem.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
+            }
+            else
+            {
+                // Calculate unit price
+                var unitPrice = product.BasePrice + (variation?.PriceModifier ?? 0);
+
+                // Create new basket item
+                var basketItem = new BasketItem
+                {
+                    BasketId = basket.Id,
+                    ProductId = item.ProductId,
+                    ProductVariationId = item.ProductVariationId,
+                    Quantity = item.Quantity,
+                    UnitPrice = unitPrice,
+                    ItemTotal = unitPrice * item.Quantity,
+                    SpecialInstructions = item.SpecialInstructions,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+
+                // Add side items if any
+
+                _context.BasketItems.Add(basketItem);
+            }
         }
 
         await _context.SaveChangesAsync();
@@ -201,6 +248,7 @@ public class BasketService : IBasketService
 
         return await GetBasketAsync(sessionId, userId) ?? throw new InvalidOperationException("Failed to retrieve basket");
     }
+
 
     public async Task<BasketDto> ClearBasketAsync(string sessionId)
     {
@@ -436,7 +484,6 @@ public class BasketService : IBasketService
             Notes = basket.Notes,
             Items = basket.Items.Select(item => new BasketItemDto
             {
-                Id = item.Id,
                 ProductId = item.ProductId,
                 ProductName = item.Product.Name,
                 ProductDescription = item.Product.Description,

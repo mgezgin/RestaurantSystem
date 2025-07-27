@@ -27,5 +27,9 @@ namespace RestaurantSystem.Domain.Common
 
         public required string RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
+
+        public decimal OrderLimitAmount { get; set; } // Order amount threshold
+        public decimal DiscountPercentage { get; set; } // Percentage to apply when threshold is met
+        public bool IsDiscountActive { get; set; } = false;
     }
 }
