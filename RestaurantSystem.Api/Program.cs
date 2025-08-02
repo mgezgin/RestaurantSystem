@@ -20,13 +20,9 @@ using RestaurantSystem.Api.Features.Basket.Interfaces;
 using RestaurantSystem.Api.Features.Basket.Services;
 using RestaurantSystem.Api.Features.Auth.Handlers;
 using RestaurantSystem.Api.BackgroundServices;
-
+using RestaurantSystem.Api.Common.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
-//builder.Services.AddSingleton<IAuthorizationHandler, RoleAuthorizationHandler>();
-// Add services to the container.
-
 builder.Services.AddApiRegistration();
 
 builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())
@@ -102,7 +98,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             .CommandTimeout(30)
     ));
 
-
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(opt =>
 {
     opt.Password.RequiredLength = 8;
@@ -110,10 +105,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(opt =>
     opt.Password.RequireLowercase = true;
     opt.Password.RequireUppercase = true;
     opt.Password.RequireNonAlphanumeric = true;
-
-
     opt.User.RequireUniqueEmail = true;
-
     opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     opt.Lockout.MaxFailedAccessAttempts = 5;
     opt.Lockout.AllowedForNewUsers = true;
@@ -154,6 +146,37 @@ builder.Services.AddAuthentication(options =>
                 context.Response.Headers.Append("Token-Expired", "true");
             }
             return Task.CompletedTask;
+        },
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+
+            context.Response.StatusCode = 401;
+
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse<object>.Failure("Authentication required", "You must be authenticated to access this resource");
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
+        },
+        OnForbidden = async context =>
+        {
+            // Handle authorization failures (403 Forbidden)
+            context.Response.StatusCode = 403;
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse<object>.Failure("Access denied", "You don't have permission to access this resource");
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
         }
     };
 });
@@ -175,6 +198,7 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
+
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -183,10 +207,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IBasketService, BasketService>();
 builder.Services.AddScoped<IBasketMergeService, BasketMergeService>();
 builder.Services.AddScoped<LoginEventHandler>();
-
 builder.Services.AddHostedService<BasketCleanupService>();
-
-
 
 var app = builder.Build();
 
