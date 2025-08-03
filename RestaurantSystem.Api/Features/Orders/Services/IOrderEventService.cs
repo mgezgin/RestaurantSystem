@@ -9,4 +9,6 @@ public interface IOrderEventService
     Task NotifyOrderReady(OrderDto order);
     Task NotifyOrderCompleted(OrderDto order);
     Task NotifyFocusOrderUpdate(OrderDto order);
+
+    Task NotifyStockUpdate(string stock);
 }

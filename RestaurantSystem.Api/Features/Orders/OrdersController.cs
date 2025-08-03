@@ -12,6 +12,7 @@ using RestaurantSystem.Api.Features.Orders.Commands.UpdateOrderStatusCommand;
 using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrderByIdQuery;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrdersQuery;
+using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Api.Features.Products.Queries.GetFocusOrdersQuery;
 
 namespace RestaurantSystem.Api.Features.Orders;
@@ -21,10 +22,13 @@ namespace RestaurantSystem.Api.Features.Orders;
 public class OrdersController : ControllerBase
 {
     private readonly CustomMediator _mediator;
+    private readonly IOrderEventService _orderEventService;
 
-    public OrdersController(CustomMediator mediator)
+    public OrdersController(CustomMediator mediator,IOrderEventService orderEventService)
     {
         _mediator = mediator;
+        _orderEventService = orderEventService;
+
     }
 
     /// <summary>
@@ -38,6 +42,19 @@ public class OrdersController : ControllerBase
         var result = await _mediator.SendQuery(query);
         return Ok(result);
     }
+
+
+    /// <summary>
+    /// Get all orders with optional filters
+    /// </summary>
+    [HttpPost("tryEvent")]
+    public async Task<ActionResult> GetStocks(
+        [FromQuery] string message)
+    {
+        await _orderEventService.NotifyStockUpdate(message);
+        return Ok(message);
+    }
+
 
     /// <summary>
     /// Get order by ID

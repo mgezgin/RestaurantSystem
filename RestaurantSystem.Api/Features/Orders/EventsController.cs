@@ -7,7 +7,6 @@ namespace RestaurantSystem.Api.Features.Orders;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class EventsController : ControllerBase
 {
     private readonly OrderEventService _orderEventService;
@@ -27,6 +26,16 @@ public class EventsController : ControllerBase
     public async Task KitchenEvents(CancellationToken cancellationToken)
     {
         await SetupSseConnection(OrderEventService.ClientType.Kitchen, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribe to kitchen order events
+    /// </summary>
+    [HttpGet("stock")]
+    [Produces("text/event-stream")]
+    public async Task StockEvents(CancellationToken cancellationToken)
+    {
+        await SetupSseConnection(OrderEventService.ClientType.Stock, cancellationToken);
     }
 
     /// <summary>

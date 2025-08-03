@@ -29,6 +29,18 @@ public class OrderEventService : IOrderEventService
         }
     }
 
+    public async Task NotifyStockUpdate(string stock)
+    {
+        var eventData = new StockEvent
+        {
+            EventType = "stock-updated",
+            PreviousStatus = stock,
+            Timestamp = DateTime.UtcNow
+        };
+        // Notify all staff about the updated order
+        await SendEventToClients(eventData, ClientType.All);
+    }
+
     public async Task NotifyOrderCreated(OrderDto order)
     {
         var eventData = new OrderEvent
@@ -111,6 +123,27 @@ public class OrderEventService : IOrderEventService
         _logger.LogInformation("Notified staff about focus order update for {OrderNumber}", order.OrderNumber);
     }
 
+    private async Task SendEventToClients(StockEvent eventData, ClientType targetClientType)
+    {
+        var json = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n\n";
+        var eventBytes = Encoding.UTF8.GetBytes(eventMessage);
+
+        var tasks = new List<Task>();
+
+        foreach (var client in _clients.Values.Where(c =>
+            targetClientType == ClientType.All || c.ClientType == targetClientType))
+        {
+            tasks.Add(SendToClient(client, eventBytes));
+        }
+
+        await Task.WhenAll(tasks);
+    }
+
     private async Task SendEventToClients(OrderEvent eventData, ClientType targetClientType)
     {
         var json = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
@@ -173,11 +206,19 @@ public class OrderEventService : IOrderEventService
         public DateTime Timestamp { get; set; }
     }
 
+    public class StockEvent
+    {
+        public string EventType { get; set; } = null!;
+        public string? PreviousStatus { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+
     public enum ClientType
     {
         Kitchen,
         Service,
         Manager,
+        Stock,
         All
     }
 }
