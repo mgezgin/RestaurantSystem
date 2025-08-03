@@ -31,6 +31,12 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<Basket> Baskets { get; set; }
         public DbSet<BasketItem> BasketItems { get; set; }
 
+        // Order-related DbSets
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<OrderPayment> OrderPayments { get; set; }
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

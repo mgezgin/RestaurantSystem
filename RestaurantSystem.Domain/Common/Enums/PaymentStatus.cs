@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RestaurantSystem.Domain.Common.Enums;
+﻿namespace RestaurantSystem.Domain.Common.Enums;
 public enum PaymentStatus
 {
     Pending = 1,
@@ -12,5 +6,7 @@ public enum PaymentStatus
     Completed = 3,
     Failed = 4,
     Refunded = 5,
-    PartiallyRefunded = 6
+    PartiallyRefunded = 6,
+    Overpaid = 7,
+    PartiallyPaid = 8
 }

@@ -71,10 +71,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        builder.Property(o => o.PaymentMethod)
-            .HasConversion<string>()
-            .HasMaxLength(20);
-
         // Indexes
         builder.HasIndex(o => o.UserId);
         builder.HasIndex(o => o.OrderDate);
@@ -96,5 +92,27 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .WithOne(h => h.Order)
             .HasForeignKey(h => h.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(o => o.TotalPaid)
+        .HasColumnType("decimal(10,2)");
+
+        builder.Property(o => o.RemainingAmount)
+            .HasColumnType("decimal(10,2)");
+
+        builder.Property(o => o.IsFocusOrder)
+            .HasDefaultValue(false);
+
+        builder.Property(o => o.Priority)
+            .HasDefaultValue(null);
+
+        builder.Property(o => o.FocusReason)
+            .HasMaxLength(500);
+
+        builder.Property(o => o.FocusedBy)
+            .HasMaxLength(100);
+
+        builder.HasIndex(o => o.IsFocusOrder);
+        builder.HasIndex(o => new { o.IsFocusOrder, o.Priority });
+
     }
 }

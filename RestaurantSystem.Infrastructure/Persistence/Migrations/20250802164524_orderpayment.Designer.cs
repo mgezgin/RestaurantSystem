@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using RestaurantSystem.Infrastructure.Persistence;
 namespace RestaurantSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250802164524_orderpayment")]
+    partial class orderpayment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -735,191 +738,150 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime?>("ActualDeliveryTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("actual_delivery_time");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CancellationReason")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("cancellation_reason");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnType("text");
 
                     b.Property<string>("CustomerEmail")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("customer_email");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("CustomerName")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("customer_name");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("CustomerPhone")
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("customer_phone");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("deleted_by");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddress")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("delivery_address");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<decimal>("DeliveryFee")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("delivery_fee");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("Discount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("discount");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("DiscountPercentage")
-                        .HasColumnType("decimal(5,2)")
-                        .HasColumnName("discount_percentage");
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<DateTime?>("EstimatedDeliveryTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("estimated_delivery_time");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FocusReason")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("focus_reason");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime?>("FocusedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("focused_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FocusedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("focused_by");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<bool>("HasUserLimitDiscount")
-                        .HasColumnType("boolean")
-                        .HasColumnName("has_user_limit_discount");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsFocusOrder")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_focus_order");
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("notes");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("OrderDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("order_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("order_number");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("PaymentStatus")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("payment_status");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<int?>("Priority")
-                        .HasColumnType("integer")
-                        .HasColumnName("priority");
+                        .HasColumnType("integer");
 
                     b.Property<string>("PromoCode")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("promo_code");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<decimal>("RemainingAmount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("remaining_amount");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<decimal>("SubTotal")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("sub_total");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<int?>("TableNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("table_number");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Tax")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("tax");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("Tip")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("tip");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("Total")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("total");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("TotalPaid")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("total_paid");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("type");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("updated_by");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("UserLimitAmount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("user_limit_amount");
+                        .HasColumnType("decimal(10,2)");
 
-                    b.HasKey("Id")
-                        .HasName("pk_orders");
+                    b.HasKey("Id");
 
                     b.HasIndex("IsFocusOrder");
 
@@ -930,14 +892,13 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_orders_user_id");
+                    b.HasIndex("UserId");
 
                     b.HasIndex("IsFocusOrder", "Priority");
 
                     b.HasIndex("UserId", "OrderDate");
 
-                    b.ToTable("orders");
+                    b.ToTable("Order");
                 });
 
             modelBuilder.Entity("RestaurantSystem.Domain.Entities.OrderItem", b =>
@@ -945,86 +906,66 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("ItemTotal")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("item_total");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<Guid?>("MenuId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("menu_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ProductName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("product_name");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid?>("ProductVariationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_variation_id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
-                        .HasColumnType("integer")
-                        .HasColumnName("quantity");
+                        .HasColumnType("integer");
 
                     b.Property<string>("SpecialInstructions")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("special_instructions");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("unit_price");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("updated_by");
+                        .HasColumnType("text");
 
                     b.Property<string>("VariationName")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("variation_name");
+                        .HasColumnType("character varying(50)");
 
-                    b.HasKey("Id")
-                        .HasName("pk_order_items");
+                    b.HasKey("Id");
 
-                    b.HasIndex("MenuId")
-                        .HasDatabaseName("ix_order_items_menu_id");
+                    b.HasIndex("MenuId");
 
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_order_items_order_id");
+                    b.HasIndex("OrderId");
 
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_order_items_product_id");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductVariationId")
-                        .HasDatabaseName("ix_order_items_product_variation_id");
+                    b.HasIndex("ProductVariationId");
 
                     b.ToTable("OrderItems", (string)null);
                 });
@@ -1034,110 +975,88 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("amount");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("CardLastFourDigits")
                         .HasMaxLength(4)
-                        .HasColumnType("character varying(4)")
-                        .HasColumnName("card_last_four_digits");
+                        .HasColumnType("character varying(4)");
 
                     b.Property<string>("CardType")
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("card_type");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsRefunded")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_refunded");
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("PaymentDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("payment_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PaymentGateway")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("payment_gateway");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("payment_method");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("PaymentNotes")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("payment_notes");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ReferenceNumber")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("reference_number");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("RefundDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("refund_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RefundReason")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("refund_reason");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<decimal?>("RefundedAmount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("refunded_amount");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("TransactionId")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("transaction_id");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("updated_by");
+                        .HasColumnType("text");
 
-                    b.HasKey("Id")
-                        .HasName("pk_order_payments");
+                    b.HasKey("Id");
 
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_order_payments_order_id");
+                    b.HasIndex("OrderId");
 
                     b.HasIndex("PaymentDate");
 
                     b.HasIndex("TransactionId");
 
-                    b.ToTable("order_payments");
+                    b.ToTable("OrderPayment");
                 });
 
             modelBuilder.Entity("RestaurantSystem.Domain.Entities.OrderStatusHistory", b =>
@@ -1145,66 +1064,53 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("changed_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ChangedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("changed_by");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnType("text");
 
                     b.Property<string>("FromStatus")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("from_status");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("notes");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("order_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ToStatus")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("to_status");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("text")
-                        .HasColumnName("updated_by");
+                        .HasColumnType("text");
 
-                    b.HasKey("Id")
-                        .HasName("pk_order_status_histories");
+                    b.HasKey("Id");
 
                     b.HasIndex("ChangedAt");
 
-                    b.HasIndex("OrderId")
-                        .HasDatabaseName("ix_order_status_histories_order_id");
+                    b.HasIndex("OrderId");
 
                     b.ToTable("OrderStatusHistory", (string)null);
                 });
@@ -1757,8 +1663,7 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.HasOne("RestaurantSystem.Domain.Common.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_orders_asp_net_users_user_id");
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("User");
                 });
@@ -1768,28 +1673,24 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.HasOne("RestaurantSystem.Domain.Entities.Menu", "Menu")
                         .WithMany()
                         .HasForeignKey("MenuId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_order_items_menus_menu_id");
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("RestaurantSystem.Domain.Entities.Order", "Order")
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_order_items_orders_order_id");
+                        .IsRequired();
 
                     b.HasOne("RestaurantSystem.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_order_items_products_product_id");
+                        .IsRequired();
 
                     b.HasOne("RestaurantSystem.Domain.Entities.ProductVariation", "ProductVariation")
                         .WithMany()
                         .HasForeignKey("ProductVariationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_order_items_productvariations_product_variation_id");
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Menu");
 
@@ -1806,8 +1707,7 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                         .WithMany("Payments")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_order_payments_orders_order_id");
+                        .IsRequired();
 
                     b.Navigation("Order");
                 });
@@ -1818,8 +1718,7 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                         .WithMany("StatusHistory")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_order_status_histories_orders_order_id");
+                        .IsRequired();
 
                     b.Navigation("Order");
                 });
