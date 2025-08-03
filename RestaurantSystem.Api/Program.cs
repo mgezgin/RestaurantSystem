@@ -1,26 +1,27 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using RestaurantSystem.Api.Common.Services.Interfaces;
-using RestaurantSystem.Api.Common.Services;
-using RestaurantSystem.Domain.Common;
-using RestaurantSystem.Infrastructure.Extensions;
-using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using RestaurantSystem.Infrastructure.Persistence;
-using RestaurantSystem.Api.Settings;
-using RestaurantSystem.Api.Common.Validation;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using RestaurantSystem.Api.BackgroundServices;
 using RestaurantSystem.Api.Common.Extensions;
 using RestaurantSystem.Api.Common.Middleware;
-using Microsoft.OpenApi.Models;
-using System.Text.Json.Serialization;
-using System.Text.Json;
+using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Common.Services;
+using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.Api.Common.Validation;
+using RestaurantSystem.Api.Features.Auth.Handlers;
 using RestaurantSystem.Api.Features.Basket.Interfaces;
 using RestaurantSystem.Api.Features.Basket.Services;
-using RestaurantSystem.Api.Features.Auth.Handlers;
-using RestaurantSystem.Api.BackgroundServices;
-using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Features.Orders.Services;
+using RestaurantSystem.Api.Settings;
+using RestaurantSystem.Domain.Common;
+using RestaurantSystem.Infrastructure.Extensions;
+using RestaurantSystem.Infrastructure.Persistence;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApiRegistration();
@@ -208,6 +209,11 @@ builder.Services.AddScoped<IBasketService, BasketService>();
 builder.Services.AddScoped<IBasketMergeService, BasketMergeService>();
 builder.Services.AddScoped<LoginEventHandler>();
 builder.Services.AddHostedService<BasketCleanupService>();
+
+builder.Services.AddSingleton<OrderEventService>();
+builder.Services.AddSingleton<IOrderEventService>(provider =>
+    provider.GetRequiredService<OrderEventService>());
+
 
 var app = builder.Build();
 
