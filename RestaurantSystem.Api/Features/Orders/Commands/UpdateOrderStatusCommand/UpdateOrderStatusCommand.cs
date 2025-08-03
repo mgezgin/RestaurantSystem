@@ -3,6 +3,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
+using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -20,17 +21,21 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
 {
     private readonly ApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IOrderEventService _orderEventService;
     private readonly ILogger<UpdateOrderStatusCommandHandler> _logger;
-
+    
     public UpdateOrderStatusCommandHandler(
-        ApplicationDbContext context,
-        ICurrentUserService currentUserService,
-        ILogger<UpdateOrderStatusCommandHandler> logger)
+          ApplicationDbContext context,
+          ICurrentUserService currentUserService,
+          IOrderEventService orderEventService,
+          ILogger<UpdateOrderStatusCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _orderEventService = orderEventService;
         _logger = logger;
     }
+
 
     public async Task<ApiResponse<OrderDto>> Handle(UpdateOrderStatusCommand command, CancellationToken cancellationToken)
     {
@@ -44,6 +49,8 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
         {
             return ApiResponse<OrderDto>.Failure("Order not found");
         }
+
+        var previousStatus = order.Status.ToString();
 
         // Validate status transition
         if (!IsValidStatusTransition(order.Status, command.NewStatus))
@@ -90,6 +97,18 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
         await _context.SaveChangesAsync(cancellationToken);
 
         var orderDto = MapToOrderDto(order);
+
+        await _orderEventService.NotifyOrderStatusChanged(orderDto, previousStatus);
+
+        if (command.NewStatus == OrderStatus.Ready)
+        {
+            await _orderEventService.NotifyOrderReady(orderDto);
+        }
+
+        if (command.NewStatus == OrderStatus.Completed)
+        {
+            await _orderEventService.NotifyOrderCompleted(orderDto);
+        }
 
         _logger.LogInformation("Order {OrderNumber} status updated from {FromStatus} to {ToStatus} by user {UserId}",
             order.OrderNumber, statusHistory.FromStatus, statusHistory.ToStatus, _currentUserService.UserId);

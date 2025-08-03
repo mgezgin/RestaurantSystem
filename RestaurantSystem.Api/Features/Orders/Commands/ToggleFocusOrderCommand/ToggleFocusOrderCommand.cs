@@ -3,6 +3,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
+using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 
@@ -19,17 +20,21 @@ public class ToggleFocusOrderCommandHandler : ICommandHandler<ToggleFocusOrderCo
 {
     private readonly ApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IOrderEventService _orderEventService;
     private readonly ILogger<ToggleFocusOrderCommandHandler> _logger;
 
     public ToggleFocusOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
+        IOrderEventService orderEventService,
         ILogger<ToggleFocusOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _orderEventService = orderEventService;
         _logger = logger;
     }
+
 
     public async Task<ApiResponse<OrderDto>> Handle(ToggleFocusOrderCommand command, CancellationToken cancellationToken)
     {
@@ -68,6 +73,8 @@ public class ToggleFocusOrderCommandHandler : ICommandHandler<ToggleFocusOrderCo
         await _context.SaveChangesAsync(cancellationToken);
 
         var orderDto = MapToOrderDto(order);
+
+        await _orderEventService.NotifyFocusOrderUpdate(orderDto);
 
         _logger.LogInformation("Order {OrderNumber} focus status changed to {IsFocusOrder} by user {UserId}",
             order.OrderNumber, command.IsFocusOrder, _currentUserService.UserId);

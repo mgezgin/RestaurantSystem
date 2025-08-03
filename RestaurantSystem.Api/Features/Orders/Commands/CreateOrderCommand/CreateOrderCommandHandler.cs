@@ -3,6 +3,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
+using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -14,14 +15,17 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
     private readonly ApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
+    private readonly IOrderEventService _orderEventService;
 
     public CreateOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
+        IOrderEventService orderEventService,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _orderEventService = orderEventService;
         _logger = logger;
     }
 
@@ -199,6 +203,13 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
 
             // Map to DTO
             var orderDto = MapToOrderDto(order);
+
+            await _orderEventService.NotifyOrderCreated(orderDto);
+
+            if (order.IsFocusOrder)
+            {
+                await _orderEventService.NotifyFocusOrderUpdate(orderDto);
+            }
 
             _logger.LogInformation("Order {OrderNumber} created successfully by user {UserId}",
                 order.OrderNumber, _currentUserService.UserId);
