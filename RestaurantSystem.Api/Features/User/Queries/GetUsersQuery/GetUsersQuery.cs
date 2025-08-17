@@ -56,6 +56,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<
             .Take(query.PageSize)
             .Select(u => new UserDto
             {
+                Id = u.Id,
                 Email = u.Email ?? string.Empty,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
@@ -72,10 +73,10 @@ public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<
                 totalPages
             );
 
-        _logger.LogInformation("Retrieved {ProductCount} products (page {Page} of {TotalPages})",
+        _logger.LogInformation("Retrieved {UserCount} users (page {Page} of {TotalPages})",
             users.Count, query.Page, totalPages);
 
         return ApiResponse<PagedResult<UserDto>>.SuccessWithData(result,
-            $"Retrieved {users.Count} products");
+            $"Retrieved {users.Count} users");
     }
 }
