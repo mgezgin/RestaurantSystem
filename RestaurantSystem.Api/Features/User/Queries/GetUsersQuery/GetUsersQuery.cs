@@ -59,7 +59,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<
                 Email = u.Email ?? string.Empty,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
-                Role = u.Role
+                Role = u.Role.ToString(),
             }).ToListAsync(cancellationToken);
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize);

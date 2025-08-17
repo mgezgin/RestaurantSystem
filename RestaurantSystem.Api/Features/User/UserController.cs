@@ -7,6 +7,8 @@ using RestaurantSystem.Api.Features.Auth.Dtos;
 using RestaurantSystem.Api.Features.User.Commands.DeleteUserCommand;
 using RestaurantSystem.Api.Features.User.Commands.RegisterCustomerCommand;
 using RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
+using RestaurantSystem.Api.Features.User.Commands.UpdateUserAdminCommand;
+using RestaurantSystem.Api.Features.User.Commands.UpdateUserProfileCommand;
 using RestaurantSystem.Api.Features.User.Dtos;
 using RestaurantSystem.Api.Features.User.Queries.GetUsersQuery;
 
@@ -51,6 +53,28 @@ public class UserController : ControllerBase
     [HttpPost("register/staff")]
     [RequireAdmin]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterUser([FromBody] RegisterUserCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update current user's profile
+    /// </summary>
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateProfile([FromBody] UpdateUserProfileCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update user settings (admin only)
+    /// </summary>
+    [HttpPut("admin-profile")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateUserDiscountSettings([FromBody] UpdateUserAdminCommand command)
     {
         var result = await _mediator.SendCommand(command);
         return Ok(result);

@@ -37,6 +37,10 @@
 
 	<ItemGroup>
 	  <Folder Include="Features\Auth\Queries\" />
+	  <Folder Include="Features\Categories\Commands\CreateCategoryCommand\" />
+	  <Folder Include="Features\Categories\Commands\DeleteCategoryCommand\" />
+	  <Folder Include="Features\Categories\Commands\UpdateCategoryCommand\" />
+	  <Folder Include="Features\Dashboard\" />
 	</ItemGroup>
 
 </Project>

@@ -10,5 +10,4 @@ public class Category : SoftDeleteEntity
     public int DisplayOrder { get; set; }
 
     public virtual ICollection<ProductCategory> ProductCategories { get; set; } = new List<ProductCategory>();
-
 }
