@@ -28,7 +28,7 @@ public class UserController : ControllerBase
     /// Get all users with optional filters
     /// </summary>
     [HttpGet("users")]
-    [AllowAnonymous]
+    [RequireAdmin]
     public async Task<ActionResult<ApiResponse<PagedResult<UserDto>>>> GetUsers(
         [FromQuery] GetUsersQuery query)
     {
