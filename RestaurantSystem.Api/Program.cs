@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using RestaurantSystem.Api.BackgroundServices;
 using RestaurantSystem.Api.Common.Extensions;
 using RestaurantSystem.Api.Common.Middleware;
@@ -91,9 +92,14 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "RestaurantSystem";
 });
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+dataSourceBuilder.EnableDynamicJson(); 
+var dataSource = dataSourceBuilder.Build();
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        dataSource,
         npgsqlOptions => npgsqlOptions
             .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.GetName().Name)
             .CommandTimeout(30)
@@ -250,3 +256,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+public partial class Program { } // Add this at the end of Program.cs
+

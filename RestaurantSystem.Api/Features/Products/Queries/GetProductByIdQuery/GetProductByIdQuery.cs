@@ -46,12 +46,8 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             IsAvailable = product.IsAvailable,
             PreparationTimeMinutes = product.PreparationTimeMinutes,
             Type = product.Type,
-            Ingredients = string.IsNullOrEmpty(product.Ingredients)
-                ? new List<string>()
-                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(product.Ingredients) ?? new List<string>(),
-            Allergens = string.IsNullOrEmpty(product.Allergens)
-                ? new List<string>()
-                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(product.Allergens) ?? new List<string>(),
+            Ingredients =product.Ingredients,
+            Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,
             Categories = product.ProductCategories
                 .OrderBy(pc => pc.DisplayOrder)

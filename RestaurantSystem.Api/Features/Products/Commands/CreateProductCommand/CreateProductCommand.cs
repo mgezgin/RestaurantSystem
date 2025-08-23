@@ -89,12 +89,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 IsAvailable = command.IsAvailable,
                 PreparationTimeMinutes = command.PreparationTimeMinutes,
                 Type = command.Type,
-                Ingredients = command.Ingredients.Any()
-                  ? System.Text.Json.JsonSerializer.Serialize(command.Ingredients)
-                  : null,
-                Allergens = command.Allergens.Any()
-                  ? System.Text.Json.JsonSerializer.Serialize(command.Allergens)
-                  : null,
+                Ingredients = command.Ingredients,
+                Allergens = command.Allergens,
                 DisplayOrder = command.DisplayOrder,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
@@ -219,12 +215,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             IsAvailable = product.IsAvailable,
             PreparationTimeMinutes = product.PreparationTimeMinutes,
             Type = product.Type,
-            Ingredients = string.IsNullOrEmpty(product.Ingredients)
-                ? new List<string>()
-                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(product.Ingredients) ?? new List<string>(),
-            Allergens = string.IsNullOrEmpty(product.Allergens)
-                ? new List<string>()
-                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(product.Allergens) ?? new List<string>(),
+            Ingredients = product.Ingredients,
+            Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,
             Categories = product.ProductCategories.Select(pc => new ProductCategoryDto
             {

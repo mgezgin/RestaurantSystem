@@ -15,8 +15,8 @@ public record ProductDto
     public bool IsAvailable { get; init; }
     public int PreparationTimeMinutes { get; init; }
     public ProductType Type { get; init; }
-    public List<string> Ingredients { get; init; } = [];
-    public List<string> Allergens { get; init; } = [];
+    public List<string>? Ingredients { get; init; } = [];
+    public List<string>? Allergens { get; init; } = [];
     public int DisplayOrder { get; init; }
     public ProductDescriptionsDto Content { get; set; } = new();
 

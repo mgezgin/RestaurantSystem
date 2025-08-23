@@ -12,8 +12,8 @@ public class Product : SoftDeleteEntity
     public bool IsAvailable { get; set; } = true;
     public int PreparationTimeMinutes { get; set; }
     public ProductType Type { get; set; } = ProductType.MainItem;
-    public string? Ingredients { get; set; } // JSON array of ingredients
-    public string? Allergens { get; set; } // JSON array of allergens
+    public List<string>? Ingredients { get; set; } // JSON array of ingredients
+    public List<string>? Allergens { get; set; } // JSON array of allergens
     public int DisplayOrder { get; set; }
 
     // Navigation properties

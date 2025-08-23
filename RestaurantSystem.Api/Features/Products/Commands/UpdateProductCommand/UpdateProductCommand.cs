@@ -85,12 +85,8 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         product.IsAvailable = command.IsAvailable;
         product.PreparationTimeMinutes = command.PreparationTimeMinutes;
         product.Type = command.Type;
-        product.Ingredients = command.Ingredients.Any()
-            ? System.Text.Json.JsonSerializer.Serialize(command.Ingredients)
-            : null;
-        product.Allergens = command.Allergens.Any()
-            ? System.Text.Json.JsonSerializer.Serialize(command.Allergens)
-            : null;
+        product.Ingredients = command.Ingredients;
+        product.Allergens = command.Allergens;
         product.DisplayOrder = command.DisplayOrder;
         product.UpdatedAt = DateTime.UtcNow;
         product.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";

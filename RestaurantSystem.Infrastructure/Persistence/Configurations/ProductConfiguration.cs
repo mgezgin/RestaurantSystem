@@ -24,10 +24,12 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasMaxLength(2048);
 
         builder.Property(p => p.Ingredients)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion<List<string>>(); ;
 
         builder.Property(p => p.Allergens)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion<List<string>>();
 
         builder.Property(p => p.IsActive)
             .HasDefaultValue(true);
