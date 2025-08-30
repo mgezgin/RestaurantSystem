@@ -43,7 +43,6 @@ public class OrdersController : ControllerBase
         return Ok(result);
     }
 
-
     /// <summary>
     /// Get all orders with optional filters
     /// </summary>

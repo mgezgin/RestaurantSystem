@@ -14,7 +14,7 @@ public class BasketItem : Entity
 
     // Navigation properties
     public virtual Basket Basket { get; set; } = null!;
-    public virtual Product Product { get; set; } = null!;
+    public virtual Product? Product { get; set; } = null!;
     public virtual ProductVariation? ProductVariation { get; set; } = null;
     public virtual Menu? Menu { get; set; } = null!;
 }

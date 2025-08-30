@@ -7,6 +7,7 @@ public class MenuItem : Entity
     public decimal? SpecialPrice { get; set; } // Override regular price if set
     public int? EstimatedQuantity { get; set; }
     public int DisplayOrder { get; set; }
+    public int Quantity { get; set; } = 1; // Default quantity when added to basket
 
     // Foreign Keys
     public Guid MenuId { get; set; }

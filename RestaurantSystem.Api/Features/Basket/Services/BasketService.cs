@@ -63,20 +63,20 @@ public class BasketService : IBasketService
     public async Task<BasketDto> AddItemToBasketAsync(string sessionId, Guid? userId, AddToBasketDto item)
     {
 
-        if(item.ProductId == Guid.Empty && item.MenuId ==Guid.Empty)
+        if (item.ProductId == Guid.Empty && item.MenuId == Guid.Empty)
         {
             throw new InvalidOperationException("Product or Menu should be provided");
         }
 
-       var basket = await GetOrCreateBasketAsync(sessionId, userId);
+        var basket = await GetOrCreateBasketAsync(sessionId, userId);
 
         if (item.MenuId.HasValue && item.MenuId.Value != Guid.Empty)
         {
             var menu = await _context.Menus
                 .Include(m => m.MenuItems)
                     .ThenInclude(mi => mi.Product)
-                .Include(m=>m.MenuItems)
-                    .ThenInclude (mi => mi.ProductVariation)
+                .Include(m => m.MenuItems)
+                    .ThenInclude(mi => mi.ProductVariation)
                 .FirstOrDefaultAsync(m => m.Id == item.MenuId && m.IsActive && !m.IsDeleted);
 
             if (menu == null)
@@ -134,7 +134,8 @@ public class BasketService : IBasketService
 
                 _context.BasketItems.Add(basketItem);
             }
-        }else if(item.ProductId != Guid.Empty)
+        }
+        else if (item.ProductId != Guid.Empty)
         {
             // Validate product exists and is available
             var product = await _context.Products
@@ -426,7 +427,7 @@ public class BasketService : IBasketService
         {
             basket = new Domain.Entities.Basket
             {
-                UserId = userId ?? Guid.Empty,
+                UserId = userId,
                 SessionId = sessionId ?? Guid.NewGuid().ToString(),
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
                 CreatedAt = DateTime.UtcNow,
@@ -448,6 +449,9 @@ public class BasketService : IBasketService
             .Include(b => b.Items)
                 .ThenInclude(bi => bi.ProductVariation)
             .Include(b => b.Items)
+                .ThenInclude(bi => bi.Menu)
+                .ThenInclude(b => b.MenuItems)
+            .Include(b => b.Items)
             .Where(b => !b.IsDeleted);
 
         if (userId.HasValue && userId.Value != Guid.Empty)
@@ -456,7 +460,7 @@ public class BasketService : IBasketService
         }
         else if (!string.IsNullOrEmpty(sessionId))
         {
-            query = query.Where(b => b.SessionId == sessionId && b.UserId == Guid.Empty);
+            query = query.Where(b => b.SessionId == sessionId && b.UserId == null || b.UserId == Guid.Empty);
         }
         else
         {
@@ -485,9 +489,10 @@ public class BasketService : IBasketService
             Items = basket.Items.Select(item => new BasketItemDto
             {
                 ProductId = item.ProductId,
-                ProductName = item.Product.Name,
-                ProductDescription = item.Product.Description,
-                ProductImageUrl = item.Product.ImageUrl,
+                ProductName = item.Product != null ? item.Product.Name : item.Menu?.Name ?? string.Empty,
+                MenuId = item.MenuId,
+                ProductDescription = item.Product != null ? item.Product.Description : item.Menu?.Description ?? string.Empty,
+                ProductImageUrl = item.Product?.ImageUrl ?? string.Empty,
                 ProductVariationId = item.ProductVariationId,
                 VariationName = item.ProductVariation?.Name,
                 Quantity = item.Quantity,

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace RestaurantSystem.IntegrationTests.Common;
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    public const string UserId = "test-user-id";
+    public const string UserId = "cd6c41d9-97e1-4fb4-9bee-ab6a9b460471";
     public const string UserName = "test@example.com";
     public const string AdminUserId = "admin-user-id";
     public const string AdminUserName = "admin@example.com";

@@ -71,51 +71,90 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             decimal subTotal = 0;
             foreach (var itemDto in command.Items)
             {
-                var product = await _context.Products
-                    .Include(p => p.Variations)
-                    .FirstOrDefaultAsync(p => p.Id == itemDto.ProductId && !p.IsDeleted, cancellationToken);
 
-                if (product == null)
+                if (itemDto.MenuId.HasValue)
                 {
-                    return ApiResponse<OrderDto>.Failure($"Product {itemDto.ProductId} not found");
-                }
+                    var menu = await _context.Menus
+                        .Include(p => p.MenuItems)
+                        .FirstOrDefaultAsync(p => p.Id == itemDto.MenuId && !p.IsDeleted, cancellationToken);
 
-                decimal unitPrice = product.BasePrice;
-                string? variationName = null;
-
-                if (itemDto.ProductVariationId.HasValue)
-                {
-                    var variation = product.Variations
-                        .FirstOrDefault(v => v.Id == itemDto.ProductVariationId.Value && !v.IsDeleted);
-
-                    if (variation == null)
+                    if (menu == null)
                     {
-                        return ApiResponse<OrderDto>.Failure($"Product variation {itemDto.ProductVariationId} not found");
+                        return ApiResponse<OrderDto>.Failure($"Menu {itemDto.MenuId} not found");
                     }
 
-                    unitPrice += variation.PriceModifier;
-                    variationName = variation.Name;
+                    decimal unitPrice = menu.BasePrice;
+                    string? variationName = null;
+
+                    var orderItem = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        ProductId = itemDto.ProductId,
+                        ProductVariationId = itemDto.ProductVariationId,
+                        MenuId = itemDto.MenuId,
+                        ProductName = menu.Name,
+                        VariationName = variationName,
+                        Quantity = itemDto.Quantity,
+                        UnitPrice = unitPrice,
+                        ItemTotal = unitPrice * itemDto.Quantity,
+                        SpecialInstructions = itemDto.SpecialInstructions,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+
+                    _context.OrderItems.Add(orderItem);
+                    order.Items.Add(orderItem);
+                    subTotal += orderItem.ItemTotal;
+
                 }
-
-                var orderItem = new OrderItem
+                else if (itemDto.ProductId.HasValue)
                 {
-                    OrderId = order.Id,
-                    ProductId = itemDto.ProductId,
-                    ProductVariationId = itemDto.ProductVariationId,
-                    MenuId = itemDto.MenuId,
-                    ProductName = product.Name,
-                    VariationName = variationName,
-                    Quantity = itemDto.Quantity,
-                    UnitPrice = unitPrice,
-                    ItemTotal = unitPrice * itemDto.Quantity,
-                    SpecialInstructions = itemDto.SpecialInstructions,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                };
+                    var product = await _context.Products
+                        .Include(p => p.Variations)
+                        .FirstOrDefaultAsync(p => p.Id == itemDto.ProductId && !p.IsDeleted, cancellationToken);
 
-                _context.OrderItems.Add(orderItem);
-                order.Items.Add(orderItem);
-                subTotal += orderItem.ItemTotal;
+                    if (product == null)
+                    {
+                        return ApiResponse<OrderDto>.Failure($"Product {itemDto.ProductId} not found");
+                    }
+
+                    decimal unitPrice = product.BasePrice;
+                    string? variationName = null;
+
+                    if (itemDto.ProductVariationId.HasValue)
+                    {
+                        var variation = product.Variations
+                            .FirstOrDefault(v => v.Id == itemDto.ProductVariationId.Value && !v.IsDeleted);
+
+                        if (variation == null)
+                        {
+                            return ApiResponse<OrderDto>.Failure($"Product variation {itemDto.ProductVariationId} not found");
+                        }
+
+                        unitPrice += variation.PriceModifier;
+                        variationName = variation.Name;
+                    }
+
+                    var orderItem = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        ProductId = itemDto.ProductId,
+                        ProductVariationId = itemDto.ProductVariationId,
+                        MenuId = itemDto.MenuId,
+                        ProductName = product.Name,
+                        VariationName = variationName,
+                        Quantity = itemDto.Quantity,
+                        UnitPrice = unitPrice,
+                        ItemTotal = unitPrice * itemDto.Quantity,
+                        SpecialInstructions = itemDto.SpecialInstructions,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+
+                    _context.OrderItems.Add(orderItem);
+                    order.Items.Add(orderItem);
+                    subTotal += orderItem.ItemTotal;
+                }
             }
 
             // Calculate order totals
@@ -294,6 +333,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             {
                 Id = i.Id,
                 ProductId = i.ProductId,
+                MenuID = i.MenuId,
                 ProductVariationId = i.ProductVariationId,
                 ProductName = i.ProductName,
                 VariationName = i.VariationName,

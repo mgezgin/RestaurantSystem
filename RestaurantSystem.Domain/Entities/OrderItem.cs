@@ -4,7 +4,7 @@ namespace RestaurantSystem.Domain.Entities;
 public class OrderItem : Entity
 {
     public Guid OrderId { get; set; }
-    public Guid ProductId { get; set; }
+    public Guid? ProductId { get; set; }
     public Guid? ProductVariationId { get; set; }
     public Guid? MenuId { get; set; }
 
@@ -17,8 +17,7 @@ public class OrderItem : Entity
 
     // Navigation properties
     public virtual Order Order { get; set; } = null!;
-    public virtual Product Product { get; set; } = null!;
+    public virtual Product? Product { get; set; } = null!;
     public virtual ProductVariation? ProductVariation { get; set; }
     public virtual Menu? Menu { get; set; }
-
 }

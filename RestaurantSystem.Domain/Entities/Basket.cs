@@ -4,7 +4,7 @@ using RestaurantSystem.Domain.Common.Base;
 namespace RestaurantSystem.Domain.Entities;
 public class Basket : SoftDeleteEntity
 {
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public string SessionId { get; set; } = null!; // For anonymous users
     public decimal SubTotal { get; set; }
     public decimal Tax { get; set; }

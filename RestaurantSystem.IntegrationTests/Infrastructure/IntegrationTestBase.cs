@@ -2,13 +2,8 @@
 using RestaurantSystem.Api.Common.Conventers;
 using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.IntegrationTests.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace RestaurantSystem.IntegrationTests.Infrastructure;
 [Collection("Database")]
@@ -69,6 +64,14 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     protected void AuthenticateAsUser()
     {
         Client.DefaultRequestHeaders.Remove("X-Test-Admin");
+    }
+
+    protected void AuthenticateAsTestUser()
+    {
+        // The TestAuthHandler will provide the user claims
+        // We just need to ensure our created user ID matches what the basket service expects
+        Client.DefaultRequestHeaders.Remove("X-Test-Admin");
+        Client.DefaultRequestHeaders.Add("Authorization", "Test");
     }
 
     // Helper methods for JSON serialization/deserialization with correct options
