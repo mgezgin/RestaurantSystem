@@ -72,7 +72,7 @@ public class UserController : ControllerBase
     /// <summary>
     /// Update user settings (admin only)
     /// </summary>
-    [HttpPut("admin-profile")]
+    [HttpPut("user-discounts")]
     [RequireAdmin]
     public async Task<ActionResult<ApiResponse<UserDto>>> UpdateUserDiscountSettings([FromBody] UpdateUserAdminCommand command)
     {
