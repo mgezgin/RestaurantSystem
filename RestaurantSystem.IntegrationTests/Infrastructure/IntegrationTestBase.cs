@@ -100,5 +100,4 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
-
 }
