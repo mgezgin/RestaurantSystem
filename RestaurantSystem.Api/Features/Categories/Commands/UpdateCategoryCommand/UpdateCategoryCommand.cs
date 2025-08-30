@@ -56,7 +56,6 @@ public class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategoryComman
         category.Description = command.Description;
         category.ImageUrl = command.ImageUrl;
         category.IsActive = command.IsActive;
-        category.DisplayOrder = command.DisplayOrder;
         category.UpdatedAt = DateTime.UtcNow;
         category.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
 

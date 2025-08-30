@@ -31,6 +31,17 @@ public class ReorderCategoriesCommandHandler : ICommandHandler<ReorderCategories
 
     public async Task<ApiResponse<string>> Handle(ReorderCategoriesCommand command, CancellationToken cancellationToken)
     {
+        var duplicateOrders = command.CategoryOrders
+        .GroupBy(co => co.DisplayOrder)
+        .Where(g => g.Count() > 1)
+        .Select(g => g.Key)
+        .ToList();
+
+        if (duplicateOrders.Any())
+        {
+            return ApiResponse<string>.Failure($"Duplicate display orders found: {string.Join(", ", duplicateOrders)}");
+        }
+
         var categoryIds = command.CategoryOrders.Select(co => co.CategoryId).ToList();
         var categories = await _context.Categories
             .Where(c => categoryIds.Contains(c.Id) && !c.IsDeleted)
