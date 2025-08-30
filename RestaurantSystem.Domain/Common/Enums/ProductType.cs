@@ -2,10 +2,10 @@
 namespace RestaurantSystem.Domain.Common.Enums;
 public enum ProductType
 {
-    [EnumMember(Value = "main_item")]
+    [EnumMember(Value = "mainItem")]
     MainItem = 0,
 
-    [EnumMember(Value = "side_item")]
+    [EnumMember(Value = "sideItem")]
     SideItem = 1,
 
     [EnumMember(Value = "beverage")]
@@ -17,6 +17,6 @@ public enum ProductType
     [EnumMember(Value = "sauce")]
     Sauce = 4,
 
-    [EnumMember(Value = "add_on")]
+    [EnumMember(Value = "addOn")]
     AddOn = 5
 }

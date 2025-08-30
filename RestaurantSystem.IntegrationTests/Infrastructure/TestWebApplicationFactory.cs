@@ -5,17 +5,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using RestaurantSystem.Api.Common.Conventers;
 using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.IntegrationTests.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace RestaurantSystem.IntegrationTests.Infrastructure;
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
@@ -34,34 +30,15 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             // Remove the existing DbContext registration
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
-
             if (descriptor != null)
             {
                 services.Remove(descriptor);
             }
 
-            services.ConfigureHttpJsonOptions(options =>
-            {
-                options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-            });
-
-            services.AddControllers()
-                .AddJsonOptions(options =>
-                {
-                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                });
-
+            // Setup database
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
-            dataSourceBuilder.EnableDynamicJson(); // 👈 this line is required
+            dataSourceBuilder.EnableDynamicJson();
             var dataSource = dataSourceBuilder.Build();
-
-
-            // Run migrations
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseNpgsql(dataSource)
-                .Options;
 
             // Add DbContext using the test container
             services.AddDbContext<ApplicationDbContext>(options =>
