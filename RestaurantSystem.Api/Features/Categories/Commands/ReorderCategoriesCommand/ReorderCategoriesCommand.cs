@@ -11,8 +11,6 @@ public record ReorderCategoriesCommand(
     List<CategoryOrderDto> CategoryOrders
 ) : ICommand<ApiResponse<string>>;
 
-
-
 public class ReorderCategoriesCommandHandler : ICommandHandler<ReorderCategoriesCommand, ApiResponse<string>>
 {
     private readonly ApplicationDbContext _context;

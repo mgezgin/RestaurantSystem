@@ -6,9 +6,9 @@ using RestaurantSystem.Api.Features.Auth.Dtos;
 using RestaurantSystem.Domain.Common;
 using RestaurantSystem.Domain.Common.Enums;
 
-namespace RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
+namespace RestaurantSystem.Api.Features.User.Commands.RegisterStaffCommand;
 
-public record RegisterUserCommand(
+public record RegisterStaffCommand(
     string FirstName,
     string LastName,
     string Email,
@@ -16,20 +16,20 @@ public record RegisterUserCommand(
     string ConfirmPassword,
     UserRole Role) : ICommand<ApiResponse<AuthResponse>>;
 
-public class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand, ApiResponse<AuthResponse>>
+public class RegisterStaffCommandHandler : ICommandHandler<RegisterStaffCommand, ApiResponse<AuthResponse>>
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
-    private readonly ILogger<RegisterUserCommandHandler> _logger;
+    private readonly ILogger<RegisterStaffCommandHandler> _logger;
 
-    public RegisterUserCommandHandler(
+    public RegisterStaffCommandHandler(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
         ICurrentUserService currentUserService,
         IEmailService emailService,
-        ILogger<RegisterUserCommandHandler> logger)
+        ILogger<RegisterStaffCommandHandler> logger)
     {
         _userManager = userManager;
         _tokenService = tokenService;
@@ -38,7 +38,7 @@ public class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand, A
         _logger = logger;
     }
 
-    public async Task<ApiResponse<AuthResponse>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
+    public async Task<ApiResponse<AuthResponse>> Handle(RegisterStaffCommand command, CancellationToken cancellationToken)
     {
         // Check if current user is admin (this endpoint should be admin-only)
         var currentUser = await _currentUserService.GetUserAsync();

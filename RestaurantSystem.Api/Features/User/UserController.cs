@@ -5,8 +5,9 @@ using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Auth.Dtos;
 using RestaurantSystem.Api.Features.User.Commands.DeleteUserCommand;
+using RestaurantSystem.Api.Features.User.Commands.EditStaffCommand;
 using RestaurantSystem.Api.Features.User.Commands.RegisterCustomerCommand;
-using RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
+using RestaurantSystem.Api.Features.User.Commands.RegisterStaffCommand;
 using RestaurantSystem.Api.Features.User.Commands.UpdateUserAdminCommand;
 using RestaurantSystem.Api.Features.User.Commands.UpdateUserProfileCommand;
 using RestaurantSystem.Api.Features.User.Dtos;
@@ -52,7 +53,18 @@ public class UserController : ControllerBase
     /// </summary>
     [HttpPost("register/staff")]
     [RequireAdmin]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterUser([FromBody] RegisterUserCommand command)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterStaff([FromBody] RegisterStaffCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Register a new user with specific role (admin only)
+    /// </summary>
+    [HttpPost("update/staff")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> UpdateStaff([FromBody] UpdateStaffCommand command)
     {
         var result = await _mediator.SendCommand(command);
         return Ok(result);

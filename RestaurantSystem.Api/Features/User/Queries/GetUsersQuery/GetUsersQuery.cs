@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
-using RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
 using RestaurantSystem.Api.Features.User.Dtos;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -19,9 +18,9 @@ public record GetUsersQuery(
 public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<PagedResult<UserDto>>>
 {
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<RegisterUserCommandHandler> _logger;
+    private readonly ILogger<GetProductsQueryHandler> _logger;
 
-    public GetProductsQueryHandler(ApplicationDbContext context, ILogger<RegisterUserCommandHandler> logger)
+    public GetProductsQueryHandler(ApplicationDbContext context, ILogger<GetProductsQueryHandler> logger)
     {
         _context = context;
         _logger = logger;

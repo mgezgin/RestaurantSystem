@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace RestaurantSystem.Api.Features.User.Commands.RegisterUserCommand;
+namespace RestaurantSystem.Api.Features.User.Commands.EditStaffCommand;
 
-public class RegisterUserCommandValidator : AbstractValidator<RegisterUserCommand>
+public class UpdateStaffCommandCommandValidator : AbstractValidator<UpdateStaffCommand>
 {
-    public RegisterUserCommandValidator()
+    public UpdateStaffCommandCommandValidator()
     {
         RuleFor(x => x.FirstName)
             .NotEmpty().WithMessage("First name is required")
@@ -25,10 +25,6 @@ public class RegisterUserCommandValidator : AbstractValidator<RegisterUserComman
             .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter")
             .Matches("[0-9]").WithMessage("Password must contain at least one digit")
             .Matches("[^a-zA-Z0-9]").WithMessage("Password must contain at least one special character");
-
-        RuleFor(x => x.ConfirmPassword)
-            .NotEmpty().WithMessage("Confirm password is required")
-            .Equal(x => x.Password).WithMessage("Passwords do not match");
 
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Invalid role specified");
