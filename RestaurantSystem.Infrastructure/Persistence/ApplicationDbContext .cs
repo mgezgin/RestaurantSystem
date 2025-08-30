@@ -116,7 +116,8 @@ namespace RestaurantSystem.Infrastructure.Persistence
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
                 // Check if the entity implements ISoftDelete
-                if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType))
+                if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType) &&
+                    !typeof(IExcludeFromGlobalFilter).IsAssignableFrom(entityType.ClrType))
                 {
                     var parameter = Expression.Parameter(entityType.ClrType, "e");
                     var property = Expression.Property(parameter, "IsDeleted");

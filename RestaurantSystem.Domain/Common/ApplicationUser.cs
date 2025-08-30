@@ -4,7 +4,7 @@ using RestaurantSystem.Domain.Common.Interfaces;
 
 namespace RestaurantSystem.Domain.Common
 {
-    public class ApplicationUser : IdentityUser<Guid>, IAuditable, ISoftDelete
+    public class ApplicationUser : IdentityUser<Guid>, IAuditable, ISoftDelete, IExcludeFromGlobalFilter
     {
 
         public required string FirstName { get; set; }
