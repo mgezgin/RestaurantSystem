@@ -4,6 +4,7 @@ using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Addresses.Commands.CreateAddressCommand;
 using RestaurantSystem.Api.Features.Addresses.Commands.DeleteAddressCommand;
+using RestaurantSystem.Api.Features.Addresses.Commands.SetDefaultAddressCommand;
 using RestaurantSystem.Api.Features.Addresses.Commands.UpdateAddressCommand;
 using RestaurantSystem.Api.Features.Addresses.Dtos;
 using RestaurantSystem.Api.Features.Addresses.Queries.GetAddressByIdQuery;
@@ -51,6 +52,18 @@ public class AddressesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ApiResponse<AddressDto>>> CreateAddress([FromBody] CreateAddressCommand command)
     {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Create a new address
+    /// </summary>
+    [HttpPost("{id}/set-default")]
+    public async Task<ActionResult<ApiResponse<string>>> CreateAddress(Guid id)
+    {
+        var command = new SetDefaultAddressCommand(id);
+
         var result = await _mediator.SendCommand(command);
         return Ok(result);
     }
