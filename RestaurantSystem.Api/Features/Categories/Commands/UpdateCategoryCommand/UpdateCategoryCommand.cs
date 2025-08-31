@@ -11,7 +11,6 @@ public record UpdateCategoryCommand(
     Guid Id,
     string Name,
     string? Description,
-    string? ImageUrl,
     bool IsActive,
     int DisplayOrder
 ) : ICommand<ApiResponse<CategoryDto>>;
@@ -54,7 +53,6 @@ public class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategoryComman
 
         category.Name = command.Name;
         category.Description = command.Description;
-        category.ImageUrl = command.ImageUrl;
         category.IsActive = command.IsActive;
         category.UpdatedAt = DateTime.UtcNow;
         category.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";

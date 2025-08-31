@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FluentValidation.Validators;
+using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
@@ -11,7 +12,6 @@ namespace RestaurantSystem.Api.Features.Categories.Commands.CreateCategoryComman
 public record CreateCategoryCommand(
     string Name,
     string? Description,
-    string? ImageUrl,
     bool IsActive,
     int DisplayOrder
 ) : ICommand<ApiResponse<CategoryDto>>;
@@ -43,14 +43,15 @@ public class CreateCategoryCommandHandler : ICommandHandler<CreateCategoryComman
             return ApiResponse<CategoryDto>.Failure("Category with this name already exists");
         }
 
+        var max = await _context.Categories.MaxAsync(c => (int?)c.DisplayOrder) ?? 0;
+
         var category = new Category
         {
             Id = Guid.NewGuid(),
             Name = command.Name,
             Description = command.Description,
-            ImageUrl = command.ImageUrl,
             IsActive = command.IsActive,
-            DisplayOrder = command.DisplayOrder,
+            DisplayOrder = max + 1,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
         };
@@ -63,7 +64,6 @@ public class CreateCategoryCommandHandler : ICommandHandler<CreateCategoryComman
             Id = category.Id,
             Name = category.Name,
             Description = category.Description,
-            ImageUrl = category.ImageUrl,
             IsActive = category.IsActive,
             DisplayOrder = category.DisplayOrder,
             ProductCount = 0,
