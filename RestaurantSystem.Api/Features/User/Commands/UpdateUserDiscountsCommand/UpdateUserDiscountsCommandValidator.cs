@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace RestaurantSystem.Api.Features.User.Commands.UpdateUserAdminCommand;
+namespace RestaurantSystem.Api.Features.User.Commands.UpdateUserDiscountsCommand;
 
-public class UpdateUserAdminCommandValidator : AbstractValidator<UpdateUserAdminCommand>
+public class UpdateUserDiscountsCommandValidator : AbstractValidator<UpdateUserDiscountsCommand>
 {
-    public UpdateUserAdminCommandValidator()
+    public UpdateUserDiscountsCommandValidator()
     {
         RuleFor(x => x.UserId)
             .NotEmpty().WithMessage("User ID is required");

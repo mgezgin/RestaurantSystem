@@ -2,7 +2,7 @@
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Common.Interfaces;
 
-namespace RestaurantSystem.Domain.Common
+namespace RestaurantSystem.Domain.Entities
 {
     public class ApplicationUser : IdentityUser<Guid>, IAuditable, ISoftDelete, IExcludeFromGlobalFilter
     {
@@ -31,5 +31,7 @@ namespace RestaurantSystem.Domain.Common
         public decimal OrderLimitAmount { get; set; } // Order amount threshold
         public decimal DiscountPercentage { get; set; } // Percentage to apply when threshold is met
         public bool IsDiscountActive { get; set; } = false;
+
+        public virtual ICollection<UserAddress> Addresses { get; set; } = new List<UserAddress>();
     }
 }

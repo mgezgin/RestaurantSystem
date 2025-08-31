@@ -92,7 +92,6 @@ public class GetFocusOrdersQueryHandler : IQueryHandler<GetFocusOrdersQuery, Api
             EstimatedDeliveryTime = o.EstimatedDeliveryTime,
             ActualDeliveryTime = o.ActualDeliveryTime,
             Notes = o.Notes,
-            DeliveryAddress = o.DeliveryAddress,
             Items = o.Items.Select(i => new OrderItemDto
             {
                 Id = i.Id,

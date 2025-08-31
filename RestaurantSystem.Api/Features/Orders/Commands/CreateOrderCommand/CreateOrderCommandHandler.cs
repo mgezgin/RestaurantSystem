@@ -16,16 +16,19 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
     private readonly IOrderEventService _orderEventService;
+    private readonly IOrderMappingService _mappingService;
 
     public CreateOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
         IOrderEventService orderEventService,
+        IOrderMappingService mappingService,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
         _orderEventService = orderEventService;
+        _mappingService = mappingService;
         _logger = logger;
     }
 
@@ -37,6 +40,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         {
             // Generate order number
             var orderNumber = await GenerateOrderNumber(cancellationToken);
+
+            var userId = command.UserId ?? _currentUserService.UserId;
 
             // Create order
             var order = new Order
@@ -57,13 +62,27 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 FocusedAt = command.IsFocusOrder ? DateTime.UtcNow : null,
                 FocusedBy = command.IsFocusOrder ? _currentUserService.UserId?.ToString() : null,
                 Notes = command.Notes,
-                DeliveryAddress = command.DeliveryAddress,
                 OrderDate = DateTime.UtcNow,
                 Status = OrderStatus.Pending,
                 PaymentStatus = PaymentStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
             };
+
+
+            if (command.Type == OrderType.Delivery)
+            {
+                var orderAddress = await CreateOrderAddress(command.DeliveryAddress, order.Id, userId, cancellationToken);
+
+                if (orderAddress == null)
+                {
+                    return ApiResponse<OrderDto>.Failure("Delivery address is required for delivery orders");
+                }
+
+                order.DeliveryAddress = orderAddress;
+            }
+
+
 
             _context.Orders.Add(order);
 
@@ -165,8 +184,12 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             // Apply discount
             if (command.HasUserLimitDiscount && subTotal >= command.UserLimitAmount)
             {
-                order.DiscountPercentage = 10; // Example: 10% discount
-                order.Discount = subTotal * (order.DiscountPercentage / 100);
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null && user.IsDiscountActive)
+                {
+                    order.DiscountPercentage = user.DiscountPercentage;
+                    order.Discount = order.SubTotal * (user.DiscountPercentage / 100);
+                }
             }
 
             order.Total = order.SubTotal + order.Tax + order.DeliveryFee - order.Discount;
@@ -241,7 +264,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             await transaction.CommitAsync(cancellationToken);
 
             // Map to DTO
-            var orderDto = MapToOrderDto(order);
+            var orderDto = await _mappingService.MapToOrderDtoAsync(order, cancellationToken);
 
             await _orderEventService.NotifyOrderCreated(orderDto);
 
@@ -295,73 +318,93 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         return 5.00m; // Fixed delivery fee, could be dynamic based on distance
     }
 
-    private static OrderDto MapToOrderDto(Order order)
+    private async Task<OrderAddress?> CreateOrderAddress(
+       CreateOrderDeliveryAddressDto? addressDto,
+       Guid orderId,
+       Guid? userId,
+       CancellationToken cancellationToken)
     {
-        return new OrderDto
+        // Case 1: Use saved address ID
+        if (addressDto?.UseAddressId != null)
         {
-            Id = order.Id,
-            OrderNumber = order.OrderNumber,
-            UserId = order.UserId,
-            CustomerName = order.CustomerName,
-            CustomerEmail = order.CustomerEmail,
-            CustomerPhone = order.CustomerPhone,
-            Type = order.Type.ToString(),
-            TableNumber = order.TableNumber,
-            SubTotal = order.SubTotal,
-            Tax = order.Tax,
-            DeliveryFee = order.DeliveryFee,
-            Discount = order.Discount,
-            DiscountPercentage = order.DiscountPercentage,
-            Tip = order.Tip,
-            Total = order.Total,
-            TotalPaid = order.TotalPaid,
-            RemainingAmount = order.RemainingAmount,
-            IsFullyPaid = order.IsFullyPaid,
-            Status = order.Status.ToString(),
-            PaymentStatus = order.PaymentStatus.ToString(),
-            IsFocusOrder = order.IsFocusOrder,
-            Priority = order.Priority,
-            FocusReason = order.FocusReason,
-            FocusedAt = order.FocusedAt,
-            FocusedBy = order.FocusedBy,
-            OrderDate = order.OrderDate,
-            EstimatedDeliveryTime = order.EstimatedDeliveryTime,
-            ActualDeliveryTime = order.ActualDeliveryTime,
-            Notes = order.Notes,
-            DeliveryAddress = order.DeliveryAddress,
-            Items = order.Items.Select(i => new OrderItemDto
+            var savedAddress = await _context.UserAddresses
+                .FirstOrDefaultAsync(a => a.Id == addressDto.UseAddressId && !a.IsDeleted, cancellationToken);
+
+            if (savedAddress != null)
             {
-                Id = i.Id,
-                ProductId = i.ProductId,
-                MenuID = i.MenuId,
-                ProductVariationId = i.ProductVariationId,
-                ProductName = i.ProductName,
-                VariationName = i.VariationName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                ItemTotal = i.ItemTotal,
-                SpecialInstructions = i.SpecialInstructions
-            }).ToList(),
-            Payments = order.Payments.Select(p => new OrderPaymentDto
+                return new OrderAddress
+                {
+                    OrderId = orderId,
+                    UserAddressId = savedAddress.Id,
+                    Label = savedAddress.Label,
+                    AddressLine1 = savedAddress.AddressLine1,
+                    AddressLine2 = savedAddress.AddressLine2,
+                    City = savedAddress.City,
+                    State = savedAddress.State,
+                    PostalCode = savedAddress.PostalCode,
+                    Country = savedAddress.Country,
+                    Phone = savedAddress.Phone,
+                    Latitude = savedAddress.Latitude,
+                    Longitude = savedAddress.Longitude,
+                    DeliveryInstructions = savedAddress.DeliveryInstructions,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+            }
+        }
+
+        // Case 2: Use provided address details
+        if (addressDto != null && !string.IsNullOrEmpty(addressDto.AddressLine1))
+        {
+            return new OrderAddress
             {
-                Id = p.Id,
-                OrderId = p.OrderId,
-                PaymentMethod = p.PaymentMethod.ToString(),
-                Amount = p.Amount,
-                Status = p.Status.ToString(),
-                TransactionId = p.TransactionId,
-                ReferenceNumber = p.ReferenceNumber,
-                PaymentDate = p.PaymentDate,
-                CardLastFourDigits = p.CardLastFourDigits,
-                CardType = p.CardType,
-                PaymentGateway = p.PaymentGateway,
-                PaymentNotes = p.PaymentNotes,
-                IsRefunded = p.IsRefunded,
-                RefundedAmount = p.RefundedAmount,
-                RefundDate = p.RefundDate,
-                RefundReason = p.RefundReason
-            }).ToList(),
-            StatusHistory = new List<OrderStatusHistoryDto>()
-        };
+                OrderId = orderId,
+                Label = addressDto.Label ?? "Delivery Address",
+                AddressLine1 = addressDto.AddressLine1,
+                AddressLine2 = addressDto.AddressLine2,
+                City = addressDto.City!,
+                State = addressDto.State,
+                PostalCode = addressDto.PostalCode!,
+                Country = addressDto.Country!,
+                Phone = addressDto.Phone,
+                Latitude = addressDto.Latitude,
+                Longitude = addressDto.Longitude,
+                DeliveryInstructions = addressDto.DeliveryInstructions,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+            };
+        }
+
+        // Case 3: Use customer's default address if no address provided
+        if (userId.HasValue)
+        {
+            var defaultAddress = await _context.UserAddresses
+                .FirstOrDefaultAsync(a => a.UserId == userId && a.IsDefault && !a.IsDeleted, cancellationToken);
+
+            if (defaultAddress != null)
+            {
+                _logger.LogInformation("Using customer's default address for order");
+                return new OrderAddress
+                {
+                    OrderId = orderId,
+                    UserAddressId = defaultAddress.Id,
+                    Label = defaultAddress.Label,
+                    AddressLine1 = defaultAddress.AddressLine1,
+                    AddressLine2 = defaultAddress.AddressLine2,
+                    City = defaultAddress.City,
+                    State = defaultAddress.State,
+                    PostalCode = defaultAddress.PostalCode,
+                    Country = defaultAddress.Country,
+                    Phone = defaultAddress.Phone,
+                    Latitude = defaultAddress.Latitude,
+                    Longitude = defaultAddress.Longitude,
+                    DeliveryInstructions = defaultAddress.DeliveryInstructions,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+            }
+        }
+
+        return null;
     }
 }

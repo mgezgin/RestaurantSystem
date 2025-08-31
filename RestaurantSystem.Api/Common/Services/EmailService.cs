@@ -2,7 +2,7 @@
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Common.Templates;
 using RestaurantSystem.Api.Settings;
-using RestaurantSystem.Domain.Common;
+using RestaurantSystem.Domain.Entities;
 using System.Net;
 using System.Net.Mail;
 using System.Text;

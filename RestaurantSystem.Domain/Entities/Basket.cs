@@ -1,5 +1,4 @@
-﻿using RestaurantSystem.Domain.Common;
-using RestaurantSystem.Domain.Common.Base;
+﻿using RestaurantSystem.Domain.Common.Base;
 
 namespace RestaurantSystem.Domain.Entities;
 public class Basket : SoftDeleteEntity

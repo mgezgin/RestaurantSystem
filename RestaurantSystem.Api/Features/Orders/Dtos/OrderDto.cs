@@ -42,11 +42,19 @@ public record OrderDto
     public DateTime OrderDate { get; set; }
     public DateTime? EstimatedDeliveryTime { get; set; }
     public DateTime? ActualDeliveryTime { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+
+    
 
     // Additional Info
     public string? Notes { get; set; }
-    public string? DeliveryAddress { get; set; }
+    public DeliveryAddressDto? DeliveryAddress { get; set; }
     public string? CancellationReason { get; set; }
+
+    public string? PromoCode { get; set; }
+    public bool HasUserLimitDiscount { get; set; }
+    public decimal UserLimitAmount { get; set; } // Threshold for discount
 
     // Related Data
     public List<OrderItemDto> Items { get; set; } = new();

@@ -1,4 +1,4 @@
-﻿using RestaurantSystem.Domain.Common;
+﻿using RestaurantSystem.Domain.Entities;
 
 namespace RestaurantSystem.Api.Common.Services.Interfaces;
 

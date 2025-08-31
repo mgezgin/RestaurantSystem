@@ -3,8 +3,8 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Auth.Dtos;
-using RestaurantSystem.Domain.Common;
 using RestaurantSystem.Domain.Common.Enums;
+using RestaurantSystem.Domain.Entities;
 
 namespace RestaurantSystem.Api.Features.User.Commands.RegisterStaffCommand;
 

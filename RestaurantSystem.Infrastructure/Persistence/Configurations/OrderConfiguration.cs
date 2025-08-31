@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RestaurantSystem.Domain.Entities;
 
 namespace RestaurantSystem.Infrastructure.Persistence.Configurations;
@@ -52,9 +52,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(o => o.Notes)
             .HasMaxLength(1000);
-
-        builder.Property(o => o.DeliveryAddress)
-            .HasMaxLength(500);
 
         builder.Property(o => o.CancellationReason)
             .HasMaxLength(500);

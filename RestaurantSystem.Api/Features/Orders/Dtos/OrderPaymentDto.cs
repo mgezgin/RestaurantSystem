@@ -23,5 +23,6 @@ public record OrderPaymentDto
     public bool IsRefunded { get; set; }
     public decimal? RefundedAmount { get; set; }
     public DateTime? RefundDate { get; set; }
+    public DateTime? CreatedAt { get; set; }
     public string? RefundReason { get; set; }
 }

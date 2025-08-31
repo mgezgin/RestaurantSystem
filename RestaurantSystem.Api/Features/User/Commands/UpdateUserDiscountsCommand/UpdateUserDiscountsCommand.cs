@@ -4,30 +4,30 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.User.Dtos;
-using RestaurantSystem.Domain.Common;
 using RestaurantSystem.Domain.Common.Enums;
+using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 
-namespace RestaurantSystem.Api.Features.User.Commands.UpdateUserAdminCommand;
+namespace RestaurantSystem.Api.Features.User.Commands.UpdateUserDiscountsCommand;
 
-public record UpdateUserAdminCommand(
+public record UpdateUserDiscountsCommand(
     Guid UserId,
     decimal OrderLimitAmount,
     decimal DiscountPercentage,
     bool IsDiscountActive) : ICommand<ApiResponse<UserDto>>;
 
-public class UpdateUserAdminCommandHandler : ICommandHandler<UpdateUserAdminCommand, ApiResponse<UserDto>>
+public class UpdateUserDiscountsCommandHandler : ICommandHandler<UpdateUserDiscountsCommand, ApiResponse<UserDto>>
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUserService _currentUserService;
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<UpdateUserAdminCommandHandler> _logger;
+    private readonly ILogger<UpdateUserDiscountsCommandHandler> _logger;
 
-    public UpdateUserAdminCommandHandler(
+    public UpdateUserDiscountsCommandHandler(
         UserManager<ApplicationUser> userManager,
         ICurrentUserService currentUserService,
         ApplicationDbContext context,
-        ILogger<UpdateUserAdminCommandHandler> logger)
+        ILogger<UpdateUserDiscountsCommandHandler> logger)
     {
         _userManager = userManager;
         _currentUserService = currentUserService;
@@ -35,7 +35,7 @@ public class UpdateUserAdminCommandHandler : ICommandHandler<UpdateUserAdminComm
         _logger = logger;
     }
 
-    public async Task<ApiResponse<UserDto>> Handle(UpdateUserAdminCommand command, CancellationToken cancellationToken)
+    public async Task<ApiResponse<UserDto>> Handle(UpdateUserDiscountsCommand command, CancellationToken cancellationToken)
     {
         // Check if current user is admin
         var currentUser = await _currentUserService.GetUserAsync();

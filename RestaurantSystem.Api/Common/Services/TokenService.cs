@@ -2,7 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Settings;
-using RestaurantSystem.Domain.Common;
+using RestaurantSystem.Domain.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;

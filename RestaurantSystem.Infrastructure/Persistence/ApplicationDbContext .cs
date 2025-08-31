@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using RestaurantSystem.Domain.Common;
 using RestaurantSystem.Domain.Common.Interfaces;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence.Configurations;
@@ -36,6 +35,11 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderPayment> OrderPayments { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+
+        //User-related DbSets
+        public DbSet<UserAddress> UserAddresses { get; set; }
+
+        public DbSet<OrderAddress> OrderAddresses { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)

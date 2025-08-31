@@ -3,6 +3,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
+using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -20,15 +21,18 @@ public class CancelOrderCommandHandler : ICommandHandler<CancelOrderCommand, Api
     private readonly ApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<CancelOrderCommandHandler> _logger;
+    private readonly IOrderMappingService _mappingService;
 
     public CancelOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
+        IOrderMappingService mappingService,
         ILogger<CancelOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
         _logger = logger;
+        _mappingService = mappingService;
     }
 
     public async Task<ApiResponse<OrderDto>> Handle(CancelOrderCommand command, CancellationToken cancellationToken)
@@ -85,96 +89,16 @@ public class CancelOrderCommandHandler : ICommandHandler<CancelOrderCommand, Api
             payment.Status = PaymentStatus.Refunded;
             payment.UpdatedAt = DateTime.UtcNow;
             payment.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
-
             // TODO: Process actual refund through payment gateway
         }
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        var orderDto = MapToOrderDto(order);
+        var orderDto = await _mappingService.MapToOrderDtoAsync(order,cancellationToken);
 
         _logger.LogInformation("Order {OrderNumber} cancelled by user {UserId}. Reason: {Reason}",
             order.OrderNumber, _currentUserService.UserId, command.CancellationReason);
 
         return ApiResponse<OrderDto>.SuccessWithData(orderDto, "Order cancelled successfully");
-    }
-
-    private static OrderDto MapToOrderDto(Order order)
-    {
-        // Same mapping logic as UpdateOrderStatusCommandHandler
-        return new OrderDto
-        {
-            Id = order.Id,
-            OrderNumber = order.OrderNumber,
-            UserId = order.UserId,
-            CustomerName = order.CustomerName,
-            CustomerEmail = order.CustomerEmail,
-            CustomerPhone = order.CustomerPhone,
-            Type = order.Type.ToString(),
-            TableNumber = order.TableNumber,
-            SubTotal = order.SubTotal,
-            Tax = order.Tax,
-            DeliveryFee = order.DeliveryFee,
-            Discount = order.Discount,
-            DiscountPercentage = order.DiscountPercentage,
-            Tip = order.Tip,
-            Total = order.Total,
-            TotalPaid = order.TotalPaid,
-            RemainingAmount = order.RemainingAmount,
-            IsFullyPaid = order.IsFullyPaid,
-            Status = order.Status.ToString(),
-            PaymentStatus = order.PaymentStatus.ToString(),
-            IsFocusOrder = order.IsFocusOrder,
-            Priority = order.Priority,
-            FocusReason = order.FocusReason,
-            FocusedAt = order.FocusedAt,
-            FocusedBy = order.FocusedBy,
-            OrderDate = order.OrderDate,
-            EstimatedDeliveryTime = order.EstimatedDeliveryTime,
-            ActualDeliveryTime = order.ActualDeliveryTime,
-            Notes = order.Notes,
-            DeliveryAddress = order.DeliveryAddress,
-            CancellationReason = order.CancellationReason,
-            Items = order.Items.Select(i => new OrderItemDto
-            {
-                Id = i.Id,
-                ProductId = i.ProductId,
-                ProductVariationId = i.ProductVariationId,
-                ProductName = i.ProductName,
-                VariationName = i.VariationName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                ItemTotal = i.ItemTotal,
-                SpecialInstructions = i.SpecialInstructions
-            }).ToList(),
-            Payments = order.Payments.Select(p => new OrderPaymentDto
-            {
-                Id = p.Id,
-                OrderId = p.OrderId,
-                PaymentMethod = p.PaymentMethod.ToString(),
-                Amount = p.Amount,
-                Status = p.Status.ToString(),
-                TransactionId = p.TransactionId,
-                ReferenceNumber = p.ReferenceNumber,
-                PaymentDate = p.PaymentDate,
-                CardLastFourDigits = p.CardLastFourDigits,
-                CardType = p.CardType,
-                PaymentGateway = p.PaymentGateway,
-                PaymentNotes = p.PaymentNotes,
-                IsRefunded = p.IsRefunded,
-                RefundedAmount = p.RefundedAmount,
-                RefundDate = p.RefundDate,
-                RefundReason = p.RefundReason
-            }).ToList(),
-            StatusHistory = order.StatusHistory.Select(h => new OrderStatusHistoryDto
-            {
-                Id = h.Id,
-                FromStatus = h.FromStatus.ToString(),
-                ToStatus = h.ToStatus.ToString(),
-                Notes = h.Notes,
-                ChangedAt = h.ChangedAt,
-                ChangedBy = h.ChangedBy
-            }).ToList()
-        };
     }
 }

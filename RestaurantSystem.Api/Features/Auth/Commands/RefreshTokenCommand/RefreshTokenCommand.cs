@@ -4,7 +4,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Auth.Dtos;
-using RestaurantSystem.Domain.Common;
+using RestaurantSystem.Domain.Entities;
 using System.Security.Claims;
 
 namespace RestaurantSystem.Api.Features.Auth.Commands.RefreshTokenCommand;

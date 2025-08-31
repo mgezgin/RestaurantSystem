@@ -1,6 +1,5 @@
-﻿using RestaurantSystem.Domain.Common.Enums;
-using RestaurantSystem.Domain.Common;
-using RestaurantSystem.Domain.Common.Base;
+﻿using RestaurantSystem.Domain.Common.Base;
+using RestaurantSystem.Domain.Common.Enums;
 
 namespace RestaurantSystem.Domain.Entities;
 public class Order : SoftDeleteEntity
@@ -52,11 +51,12 @@ public class Order : SoftDeleteEntity
 
     // Additional Info
     public string? Notes { get; set; }
-    public string? DeliveryAddress { get; set; }
     public string? CancellationReason { get; set; }
+
 
     // Navigation properties
     public virtual ApplicationUser? User { get; set; }
+    public virtual OrderAddress? DeliveryAddress { get; set; } // One-to-one relationship
     public virtual ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
     public virtual ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
     public virtual ICollection<OrderPayment> Payments { get; set; } = new List<OrderPayment>();

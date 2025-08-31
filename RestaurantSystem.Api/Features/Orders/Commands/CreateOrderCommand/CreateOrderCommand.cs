@@ -4,6 +4,7 @@ using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Domain.Common.Enums;
 
 namespace RestaurantSystem.Api.Features.Orders.Commands.CreateOrderCommand;
+
 public record CreateOrderCommand : ICommand<ApiResponse<OrderDto>>
 {
     public Guid? UserId { get; set; }
@@ -27,7 +28,8 @@ public record CreateOrderCommand : ICommand<ApiResponse<OrderDto>>
 
     // Additional Info
     public string? Notes { get; set; }
-    public string? DeliveryAddress { get; set; }
+
+    public CreateOrderDeliveryAddressDto? DeliveryAddress { get; set; }
 
     // Order Items
     public List<CreateOrderItemDto> Items { get; set; } = new();
