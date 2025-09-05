@@ -114,16 +114,19 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 product.ProductCategories.Add(productCategory);
             }
 
+            var languageCodes = command.Content.Select(x => x.Key).ToList();
+            var duplicateLanguageCodes = languageCodes.GroupBy(x => x)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicateLanguageCodes.Any())
+            {
+                return ApiResponse<ProductDto>.Failure($"Duplicate language codes found: {string.Join(", ", duplicateLanguageCodes)}");
+            }
+
             foreach (var (languageCode, description) in command.Content)
             {
-
-                var isAny = await _context.ProductDescriptions.AnyAsync(x => string.Equals(languageCode, x.Lang));
-
-                if (isAny)
-                {
-                    return ApiResponse<ProductDto>.Failure($"language {languageCode} used more than one");
-                }
-
                 var productDescription = new ProductDescription
                 {
                     Lang = languageCode,
