@@ -7,7 +7,6 @@ using RestaurantSystem.Api.Features.Products.Queries.GetProductByIdQuery;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Model;
 
 namespace RestaurantSystem.Api.Features.Products.Commands.UpdateProductCommand;
 
@@ -110,6 +109,17 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         }
 
         _context.ProductDescriptions.RemoveRange(product.Descriptions);
+        
+        var languageCodes = command.Content.Select(x => x.Key).ToList();
+        var duplicateLanguageCodes = languageCodes.GroupBy(x => x)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateLanguageCodes.Any())
+        {
+            return ApiResponse<ProductDto>.Failure($"Duplicate language codes found: {string.Join(", ", duplicateLanguageCodes)}");
+        }
 
         foreach (var key in command.Content.Keys)
         {
