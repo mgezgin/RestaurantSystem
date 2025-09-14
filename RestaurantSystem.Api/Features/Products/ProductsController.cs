@@ -4,6 +4,7 @@ using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Products.Commands.CreateProductCommand;
+using RestaurantSystem.Api.Features.Products.Commands.DeleteProductCommand;
 using RestaurantSystem.Api.Features.Products.Commands.DeleteProductImageCommand;
 using RestaurantSystem.Api.Features.Products.Commands.UpdateProductCommand;
 using RestaurantSystem.Api.Features.Products.Commands.UpdateProductImageCommand;
@@ -82,14 +83,14 @@ public class ProductsController : ControllerBase
     ///// <summary>
     ///// Delete a product
     ///// </summary>
-    //[HttpDelete("{id}")]
-    //[RequireAdmin]
-    //public async Task<ActionResult<ApiResponse<string>>> DeleteProduct(Guid id)
-    //{
-    //    var command = new DeleteProductCommand(id);
-    //    var result = await _mediator.SendCommand(command);
-    //    return Ok(result);
-    //}
+    [HttpDelete("{id}")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<string>>> DeleteProduct(Guid id)
+    {
+        var command = new DeleteProductCommand(id);
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
 
     // Product Image Endpoints
 
