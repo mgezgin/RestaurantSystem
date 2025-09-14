@@ -35,6 +35,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
     private readonly ApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<UpdateProductCommandHandler> _logger;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<GetProductByIdQueryHandler> _getProductlogger;
 
 
@@ -42,15 +43,15 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
         ILogger<UpdateProductCommandHandler> logger,
-        ILogger<GetProductByIdQueryHandler> getProductlogger
-
-
+        ILogger<GetProductByIdQueryHandler> getProductlogger,
+        IConfiguration configuration
         )
     {
         _context = context;
         _currentUserService = currentUserService;
         _logger = logger;
         _getProductlogger = getProductlogger;
+        _configuration = configuration;
     }
 
     public async Task<ApiResponse<ProductDto>> Handle(UpdateProductCommand command, CancellationToken cancellationToken)
@@ -217,7 +218,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                 .ThenInclude(si => si.SideItemProduct)
             .FirstAsync(p => p.Id == product.Id, cancellationToken);
 
-        var handler = new GetProductByIdQueryHandler(_context, _getProductlogger);
+        var handler = new GetProductByIdQueryHandler(_context, _getProductlogger,_configuration);
         var result = await handler.Handle(new GetProductByIdQuery(product.Id), cancellationToken);
 
         _logger.LogInformation("Product {ProductId} updated successfully by user {UserId}",
