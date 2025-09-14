@@ -37,7 +37,7 @@ public class GetProductImagesQueryHandler : IQueryHandler<GetProductImagesQuery,
 
         var images = product.Images.Select(i => new ProductImageDto
         {
-            Url = _baseUrl + i.Url,
+            Url = _baseUrl +"/"+ i.Url,
             AltText = i.AltText,
             IsPrimary = i.IsPrimary,
             SortOrder = i.SortOrder,
