@@ -14,7 +14,6 @@ public record CreateProductCommand(
     string Name,
     string? Description,
     decimal BasePrice,
-    string? ImageUrl,
     bool IsActive,
     bool IsAvailable,
     int PreparationTimeMinutes,

@@ -16,11 +16,6 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
         RuleFor(x => x.BasePrice)
             .GreaterThan(0).WithMessage("Base price must be greater than 0");
 
-        RuleFor(x => x.ImageUrl)
-            .MaximumLength(500).WithMessage("Image URL cannot exceed 500 characters")
-            .Must(BeAValidUrl).When(x => !string.IsNullOrEmpty(x.ImageUrl))
-            .WithMessage("Image URL must be a valid URL");
-
         RuleFor(x => x.PreparationTimeMinutes)
             .GreaterThanOrEqualTo(0).WithMessage("Preparation time cannot be negative");
 
