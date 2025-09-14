@@ -13,16 +13,20 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<GetProductByIdQueryHandler> _logger;
+    private readonly string _baseUrl;
 
-    public GetProductByIdQueryHandler(ApplicationDbContext context, ILogger<GetProductByIdQueryHandler> logger)
+    public GetProductByIdQueryHandler(ApplicationDbContext context, ILogger<GetProductByIdQueryHandler> logger, IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
+        _baseUrl = configuration["AWS:S3:BaseUrl"]!;
     }
 
     public async Task<ApiResponse<ProductDto>> Handle(GetProductByIdQuery query, CancellationToken cancellationToken)
     {
         var product = await _context.Products
+            .Include(p => p.Descriptions)
+            .Include(p => p.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder))
@@ -46,9 +50,17 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             IsAvailable = product.IsAvailable,
             PreparationTimeMinutes = product.PreparationTimeMinutes,
             Type = product.Type,
-            Ingredients =product.Ingredients,
+            Ingredients = product.Ingredients,
             Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,
+            Images = product.Images.Select(i => new ProductImageDto
+            {
+                Url = _baseUrl + "/" + i.Url,
+                AltText = i.AltText,
+                IsPrimary = i.IsPrimary,
+                SortOrder = i.SortOrder,
+                ProductId = i.ProductId
+            }).ToList(),
             Categories = product.ProductCategories
                 .OrderBy(pc => pc.DisplayOrder)
                 .Select(pc => new ProductCategoryDto
