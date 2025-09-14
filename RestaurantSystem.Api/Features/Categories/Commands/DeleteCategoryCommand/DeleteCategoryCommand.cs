@@ -5,9 +5,7 @@ using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Infrastructure.Persistence;
 
 namespace RestaurantSystem.Api.Features.Categories.Commands.DeleteCategoryCommand;
-
 public record DeleteCategoryCommand(Guid Id) : ICommand<ApiResponse<string>>;
-
 
 public class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategoryCommand, ApiResponse<string>>
 {
@@ -30,6 +28,7 @@ public class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategoryComman
 
         var category = await _context.Categories
             .Include(c => c.ProductCategories)
+                .ThenInclude(pc => pc.Product) // Add this line to include the Product entity
             .FirstOrDefaultAsync(c => c.Id == command.Id && !c.IsDeleted, cancellationToken);
 
         if (category == null)
@@ -37,8 +36,7 @@ public class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategoryComman
             return ApiResponse<string>.Failure("Category not found");
         }
 
-        // Check if category has products
-        if (category.ProductCategories.Any(pc => !pc.Product.IsDeleted))
+        if (category.ProductCategories.Any(pc => pc.Product != null && !pc.Product.IsDeleted))
         {
             return ApiResponse<string>.Failure("Cannot delete category with associated products. Please remove all products from this category first.");
         }
