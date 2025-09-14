@@ -34,6 +34,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             .Include(p => p.Variations.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder))
             .Include(p => p.SuggestedSideItems)
                 .ThenInclude(si => si.SideItemProduct)
+                    .ThenInclude(product => product!.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
             .FirstOrDefaultAsync(p => p.Id == query.Id, cancellationToken);
 
         if (product == null)
@@ -57,6 +58,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             DisplayOrder = product.DisplayOrder,
             Images = product.Images.Select(i => new ProductImageDto
             {
+                Id = i.Id,
                 Url = _baseUrl + "/" + i.Url,
                 AltText = i.AltText,
                 IsPrimary = i.IsPrimary,
@@ -107,7 +109,18 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
                     Description = si.SideItemProduct.Description,
                     Price = si.SideItemProduct.BasePrice,
                     IsRequired = si.IsRequired,
-                    DisplayOrder = si.DisplayOrder
+                    DisplayOrder = si.DisplayOrder,
+                    Images = si.SideItemProduct.Images
+                        .Select(i => new ProductImageDto
+                        {
+                            Id = i.Id,
+                            Url = _baseUrl + "/" + i.Url,
+                            AltText = i.AltText,
+                            IsPrimary = i.IsPrimary,
+                            SortOrder = i.SortOrder,
+                            ProductId = i.ProductId
+                        })
+                        .ToList()
                 })
                 .ToList(),
             Content = new()

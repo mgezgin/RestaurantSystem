@@ -9,7 +9,6 @@ using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 
 namespace RestaurantSystem.Api.Features.Products.Commands.CreateProductCommand;
-
 public record CreateProductCommand(
     string Name,
     string? Description,
