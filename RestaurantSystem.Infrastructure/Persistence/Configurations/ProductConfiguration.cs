@@ -34,8 +34,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.IsActive)
             .HasDefaultValue(true);
 
-        builder.Property(p => p.IsAvailable)
-            .HasDefaultValue(true);
+        builder.Property(p => p.IsSpecial)
+            .HasDefaultValue(false);
 
         builder.Property(p => p.PreparationTimeMinutes)
             .IsRequired();

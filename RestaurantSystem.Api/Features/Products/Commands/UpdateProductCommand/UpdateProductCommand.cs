@@ -17,6 +17,7 @@ public record UpdateProductCommand(
     decimal BasePrice,
     bool IsActive,
     bool IsAvailable,
+    bool IsSpecial,
     int PreparationTimeMinutes,
     ProductType Type,
     List<string>? Ingredients,
@@ -82,6 +83,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         product.BasePrice = command.BasePrice;
         product.IsActive = command.IsActive;
         product.IsAvailable = command.IsAvailable;
+        product.IsSpecial = command.IsSpecial;
         product.PreparationTimeMinutes = command.PreparationTimeMinutes;
         product.Type = command.Type;
         product.Ingredients = command.Ingredients;

@@ -31,6 +31,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
     public async Task<ApiResponse<PagedResult<ProductSummaryDto>>> Handle(GetProductsQuery query, CancellationToken cancellationToken)
     {
         var productsQuery = _context.Products
+            .Include(p => p.Images)
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations)
@@ -86,6 +87,14 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 IsActive = p.IsActive,
                 IsAvailable = p.IsAvailable,
                 Type = p.Type,
+                Images = p.Images.Select(s=>new ProductImageDto
+                {
+                    Id = s.Id,
+                    Url = s.Url,
+                    IsPrimary = s.IsPrimary,
+                    SortOrder = s.SortOrder,
+                    AltText = s.AltText
+                }).ToList(),
                 CategoryNames = p.ProductCategories.Select(pc => pc.Category.Name).ToList(),
                 PrimaryCategoryName = p.ProductCategories
                     .Where(pc => pc.IsPrimary)

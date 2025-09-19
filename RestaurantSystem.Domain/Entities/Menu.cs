@@ -7,6 +7,7 @@ public class Menu : SoftDeleteEntity
     public DateOnly Date { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsSpecial { get; set; } = false; // Is this a special menu (e.g., holiday menu)
     public int DisplayOrder { get; set; } = 0;
     public decimal BasePrice { get; set; } // Override regular price if set
 

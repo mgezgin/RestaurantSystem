@@ -10,6 +10,7 @@ public class Product : SoftDeleteEntity
     public string? ImageUrl { get; init; } // Primary image URL for backward compatibility
     public bool IsActive { get; set; } = true;
     public bool IsAvailable { get; set; } = true;
+    public bool IsSpecial { get; set; } = false; // Is this a special menu (e.g., holiday menu)
     public int PreparationTimeMinutes { get; set; }
     public ProductType Type { get; set; } = ProductType.MainItem;
     public List<string>? Ingredients { get; set; } // JSON array of ingredients
