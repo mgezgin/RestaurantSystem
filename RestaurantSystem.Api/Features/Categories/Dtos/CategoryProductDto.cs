@@ -1,4 +1,6 @@
-﻿namespace RestaurantSystem.Api.Features.Categories.Dtos;
+﻿using RestaurantSystem.Api.Features.Products.Dtos;
+
+namespace RestaurantSystem.Api.Features.Categories.Dtos;
 
 public record CategoryProductDto
 {
@@ -6,7 +8,7 @@ public record CategoryProductDto
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
     public decimal BasePrice { get; init; }
-    public string? ImageUrl { get; init; }
+    public List<ProductImageDto> Images { get; init; } = new();
     public bool IsAvailable { get; init; }
     public bool IsPrimaryCategory { get; init; }
     public int PreparationTimeMinutes { get; init; }

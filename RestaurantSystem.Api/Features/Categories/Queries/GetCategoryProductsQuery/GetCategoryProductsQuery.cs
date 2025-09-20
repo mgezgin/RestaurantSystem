@@ -2,6 +2,7 @@
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Categories.Dtos;
+using RestaurantSystem.Api.Features.Products.Dtos;
 using RestaurantSystem.Infrastructure.Persistence;
 
 namespace RestaurantSystem.Api.Features.Categories.Queries.GetCategoryProductsQuery;
@@ -65,9 +66,12 @@ public class GetCategoryProductsQueryHandler : IQueryHandler<GetCategoryProducts
                 Name = pc.Product.Name,
                 Description = pc.Product.Description,
                 BasePrice = pc.Product.BasePrice,
-                ImageUrl = pc.Product.Images.FirstOrDefault(i => i.IsPrimary) != null
-                    ? pc.Product.Images.FirstOrDefault(i => i.IsPrimary)!.Url
-                    : null,
+                Images = pc.Product.Images.Select(i => new ProductImageDto
+                {
+                    Id = i.Id,
+                    Url = i.Url,
+                    IsPrimary = i.IsPrimary
+                }).ToList(),
                 IsAvailable = pc.Product.IsAvailable,
                 IsPrimaryCategory = pc.IsPrimary,
                 PreparationTimeMinutes = pc.Product.PreparationTimeMinutes

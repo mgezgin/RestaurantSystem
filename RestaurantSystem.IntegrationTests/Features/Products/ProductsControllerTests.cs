@@ -2,13 +2,7 @@
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Products.Dtos;
 using RestaurantSystem.IntegrationTests.Infrastructure;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestaurantSystem.IntegrationTests.Features.Products;
 public class ProductsControllerTests : IntegrationTestBase
