@@ -10,10 +10,10 @@ using RestaurantSystem.Api.Features.Orders.Commands.RefundPaymentCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.ToggleFocusOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.UpdateOrderStatusCommand;
 using RestaurantSystem.Api.Features.Orders.Dtos;
+using RestaurantSystem.Api.Features.Orders.Queries.GetFocusOrdersQuery;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrderByIdQuery;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrdersQuery;
 using RestaurantSystem.Api.Features.Orders.Services;
-using RestaurantSystem.Api.Features.Products.Queries.GetFocusOrdersQuery;
 
 namespace RestaurantSystem.Api.Features.Orders;
 

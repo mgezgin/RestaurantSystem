@@ -5,7 +5,7 @@ using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 
-namespace RestaurantSystem.Api.Features.Products.Queries.GetFocusOrdersQuery;
+namespace RestaurantSystem.Api.Features.Orders.Queries.GetFocusOrdersQuery;
 
 public class GetFocusOrdersQuery : IQuery<ApiResponse<List<OrderDto>>>
 {

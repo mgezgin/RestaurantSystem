@@ -90,11 +90,12 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 BasePrice = p.BasePrice,
                 IsActive = p.IsActive,
                 IsAvailable = p.IsAvailable,
+                IsSpecial = p.IsSpecial,
                 Type = p.Type,
                 Images = p.Images.Select(s=>new ProductImageDto
                 {
                     Id = s.Id,
-                    Url = _baseUrl + "/" + s.Url,
+                    Url = _baseUrl + "/" + s    .Url,
                     IsPrimary = s.IsPrimary,
                     SortOrder = s.SortOrder,
                     AltText = s.AltText

@@ -13,6 +13,8 @@ public record ProductDto
     public string? ImageUrl { get; init; } // Primary image URL for backward compatibility
     public bool IsActive { get; init; }
     public bool IsAvailable { get; init; }
+
+    public bool IsSpecial { get; init; } // Is this a special menu (e.g., holiday menu)
     public int PreparationTimeMinutes { get; init; }
     public ProductType Type { get; init; }
     public List<string>? Ingredients { get; init; } = [];

@@ -11,6 +11,7 @@ public record ProductSummaryDto
     public string? ImageUrl { get; init; }
     public bool IsActive { get; init; }
     public bool IsAvailable { get; init; }
+    public bool IsSpecial { get; init; }
     public ProductType Type { get; init; }
     public List<string> CategoryNames { get; init; } = new();
     public List<ProductImageDto> Images { get; init; } = [];
