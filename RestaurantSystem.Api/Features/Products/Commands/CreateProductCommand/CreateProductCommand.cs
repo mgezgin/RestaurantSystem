@@ -57,8 +57,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         try
         {
             var categories = await _context.Categories
-       .Where(c => command.CategoryIds.Contains(c.Id))
-       .ToListAsync(cancellationToken);
+               .Where(c => command.CategoryIds.Contains(c.Id))
+               .ToListAsync(cancellationToken);
 
             // Validate primary category
             if (command.PrimaryCategoryId.HasValue && !command.CategoryIds.Contains(command.PrimaryCategoryId.Value))

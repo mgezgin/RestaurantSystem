@@ -12,6 +12,7 @@ public record GetProductsQuery(
     ProductType? Type,
     bool? IsActive,
     bool? IsAvailable,
+    bool? isSpeacial,
     string? Search,
     int Page = 1,
     int PageSize = 20
@@ -61,6 +62,11 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
         if (query.IsAvailable.HasValue)
         {
             productsQuery = productsQuery.Where(p => p.IsAvailable == query.IsAvailable.Value);
+        }
+
+        if (query.isSpeacial.HasValue)
+        {
+            productsQuery = productsQuery.Where(p => p.IsSpecial == query.isSpeacial.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
