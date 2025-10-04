@@ -69,7 +69,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             if (command.SuggestedSideItemIds?.Any() == true)
             {
                 var sideItemsExist = await _context.Products
-                    .Where(p => command.SuggestedSideItemIds.Contains(p.Id) && p.Type == ProductType.SideItem)
+                    .Where(p => command.SuggestedSideItemIds.Contains(p.Id))
                     .CountAsync(cancellationToken) == command.SuggestedSideItemIds.Count;
 
                 if (!sideItemsExist)

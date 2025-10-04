@@ -5,18 +5,15 @@ public enum ProductType
     [EnumMember(Value = "mainItem")]
     MainItem = 0,
 
-    [EnumMember(Value = "sideItem")]
-    SideItem = 1,
-
     [EnumMember(Value = "beverage")]
-    Beverage = 2,
+    Beverage = 1,
 
     [EnumMember(Value = "dessert")]
-    Dessert = 3,
+    Dessert = 2,
 
     [EnumMember(Value = "sauce")]
-    Sauce = 4,
+    Sauce = 3,
 
     [EnumMember(Value = "addOn")]
-    AddOn = 5
+    AddOn = 4
 }
