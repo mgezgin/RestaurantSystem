@@ -110,7 +110,6 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             _context.ProductCategories.Add(productCategory);
         }
 
-        _context.ProductDescriptions.RemoveRange(product.Descriptions);
 
         var languageCodes = command.Content.Select(x => x.Key).ToList();
         var duplicateLanguageCodes = languageCodes.GroupBy(x => x)
@@ -123,8 +122,15 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             return ApiResponse<ProductDto>.Failure($"Duplicate language codes found: {string.Join(", ", duplicateLanguageCodes)}");
         }
 
+
+        if(command.Content.Any())
+        {
+            _context.ProductDescriptions.RemoveRange(product.Descriptions);
+        }
+
         foreach (var key in command.Content.Keys)
         {
+
             var content = command.Content[key];
             var productDescription = new ProductDescription()
             {
@@ -139,35 +145,12 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                 ProductId = product.Id
             };
             await _context.ProductDescriptions.AddAsync(productDescription);
-            product.Descriptions.Add(productDescription);
         }
 
         // Update variations
         if (command.Variations != null)
         {
-            // Handle existing variations
-            foreach (var variation in product.Variations)
-            {
-                var updateDto = command.Variations.FirstOrDefault(v => v.Id == variation.Id);
-                if (updateDto != null)
-                {
-                    variation.Name = updateDto.Name;
-                    variation.Description = updateDto.Description;
-                    variation.PriceModifier = updateDto.PriceModifier;
-                    variation.IsActive = updateDto.IsActive;
-                    variation.DisplayOrder = updateDto.DisplayOrder;
-                    variation.UpdatedAt = DateTime.UtcNow;
-                    variation.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
-                }
-                else
-                {
-                    // Mark as deleted if not in update list
-                    variation.IsDeleted = true;
-                    variation.DeletedAt = DateTime.UtcNow;
-                    variation.DeletedBy = _currentUserService.UserId?.ToString() ?? "System";
-                }
-            }
-
+            _context.ProductVariations.RemoveRange(product.Variations);
             // Add new variations
             var newVariations = command.Variations.Where(v => v.Id == null || v.Id == Guid.Empty);
             foreach (var newVariation in newVariations)
