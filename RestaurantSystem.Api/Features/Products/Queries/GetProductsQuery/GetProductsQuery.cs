@@ -3,6 +3,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Products.Dtos;
 using RestaurantSystem.Domain.Common.Enums;
+using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 
 namespace RestaurantSystem.Api.Features.Products.Queries.GetProductsQuery;
@@ -103,6 +104,8 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 IsAvailable = p.IsAvailable,
                 IsSpecial = p.IsSpecial,
                 Type = p.Type,
+                Allergens = p.Allergens,
+                Ingredients = p.Ingredients,
                 Images = p.Images.Select(s => new ProductImageDto
                 {
                     Id = s.Id,

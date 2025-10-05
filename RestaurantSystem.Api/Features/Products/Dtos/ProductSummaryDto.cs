@@ -13,6 +13,8 @@ public record ProductSummaryDto
     public bool IsAvailable { get; init; }
     public bool IsSpecial { get; init; }
     public ProductType Type { get; init; }
+    public List<string>? Ingredients { get; init; } = [];
+    public List<string>? Allergens { get; init; } = [];
     public List<string> CategoryNames { get; init; } = new();
     public List<ProductImageDto> Images { get; init; } = [];
     public ProductDescriptionsDto Content { get; set; } = new();
