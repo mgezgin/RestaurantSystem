@@ -33,7 +33,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             .Include(p => p.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
-            .Include(p => p.Variations.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder))
+            .Include(p => p.Variations.OrderBy(v => v.DisplayOrder))
             .Include(p => p.SuggestedSideItems) // Add soft delete filter here
                 .ThenInclude(si => si.SideItemProduct)
                     .ThenInclude(product => product!.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
@@ -90,7 +90,6 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
                 })
                 .FirstOrDefault(),
             Variations = product.Variations
-                .Where(v => v.IsActive)
                 .Select(v => new ProductVariationDto
                 {
                     Id = v.Id,

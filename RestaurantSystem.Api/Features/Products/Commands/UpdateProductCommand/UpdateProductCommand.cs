@@ -138,7 +138,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                 Product = product,
                 ProductId = product.Id
             };
-            _context.ProductDescriptions.Add(productDescription);
+            await _context.ProductDescriptions.AddAsync(productDescription);
             product.Descriptions.Add(productDescription);
         }
 
@@ -183,7 +183,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
-                _context.ProductVariations.Add(variation);
+                await _context.ProductVariations.AddAsync(variation, cancellationToken);
             }
         }
 
@@ -204,7 +204,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
-                await _context.ProductSideItems.AddAsync(productSideItem);
+                await _context.ProductSideItems.AddAsync(productSideItem,cancellationToken);
             }
         }
 
