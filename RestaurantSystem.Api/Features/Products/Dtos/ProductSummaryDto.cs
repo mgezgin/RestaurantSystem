@@ -15,6 +15,7 @@ public record ProductSummaryDto
     public ProductType Type { get; init; }
     public List<string> CategoryNames { get; init; } = new();
     public List<ProductImageDto> Images { get; init; } = [];
+    public ProductDescriptionsDto Content { get; set; } = new();
     public string? PrimaryCategoryName { get; init; }
     public int VariationCount { get; init; }
     public int SideItemCount { get; init; }

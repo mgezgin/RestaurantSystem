@@ -37,6 +37,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
     {
         var productsQuery = _context.Products
             .Include(p => p.Images)
+            .Include(p => p.Descriptions)
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations)
@@ -82,13 +83,17 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
         // Get total count
         var totalCount = await productsQuery.CountAsync(cancellationToken);
 
-        // Order and paginate
+
         var products = await productsQuery
-            .OrderBy(p => p.DisplayOrder)
-            .ThenBy(p => p.Name)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(p => new ProductSummaryDto
+        .OrderBy(p => p.DisplayOrder)
+        .ThenBy(p => p.Name)
+        .Skip((query.Page - 1) * query.PageSize)
+        .Take(query.PageSize)
+        .ToListAsync(cancellationToken);
+
+        var productDtos = products.Select(p =>
+        {
+            var dto = new ProductSummaryDto
             {
                 Id = p.Id,
                 Name = p.Name,
@@ -98,10 +103,10 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 IsAvailable = p.IsAvailable,
                 IsSpecial = p.IsSpecial,
                 Type = p.Type,
-                Images = p.Images.Select(s=>new ProductImageDto
+                Images = p.Images.Select(s => new ProductImageDto
                 {
                     Id = s.Id,
-                    Url = _baseUrl + "/" + s    .Url,
+                    Url = _baseUrl + "/" + s.Url,
                     IsPrimary = s.IsPrimary,
                     SortOrder = s.SortOrder,
                     AltText = s.AltText
@@ -112,14 +117,29 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                     .Select(pc => pc.Category.Name)
                     .FirstOrDefault(),
                 VariationCount = p.Variations.Count,
-                SideItemCount = p.SuggestedSideItems.Count
-            })
-            .ToListAsync(cancellationToken);
+                SideItemCount = p.SuggestedSideItems.Count,
+                Content = new() // Initialize Content dictionary
+            };
+
+            // Fill Content from Descriptions
+            foreach (var description in p.Descriptions)
+            {
+                dto.Content[description.Lang] = new ProductDescriptionDto
+                {
+                    Name = description.Name,
+                    Description = description.Description
+                };
+            }
+
+            return dto;
+        }).ToList();
+
+
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize);
 
         var result = new PagedResult<ProductSummaryDto>(
-            products,
+            productDtos,
             totalCount,
             query.Page,
             query.PageSize,
