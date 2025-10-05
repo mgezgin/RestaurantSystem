@@ -27,16 +27,17 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
     public async Task<ApiResponse<ProductDto>> Handle(GetProductByIdQuery query, CancellationToken cancellationToken)
     {
         var product = await _context.Products
+            .IgnoreQueryFilters() // This will load ALL products, including soft-deleted ones
+            .AsSplitQuery()
             .Include(p => p.Descriptions)
             .Include(p => p.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder))
-            .Include(p => p.SuggestedSideItems)
+            .Include(p => p.SuggestedSideItems) // Add soft delete filter here
                 .ThenInclude(si => si.SideItemProduct)
                     .ThenInclude(product => product!.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
-            .FirstOrDefaultAsync(p => p.Id == query.Id, cancellationToken);
-
+            .FirstOrDefaultAsync(p => p.Id == query.Id && !p.IsDeleted, cancellationToken); // Also filter the main product
         if (product == null)
         {
             _logger.LogWarning("Product with ID {ProductId} not found", query.Id);
@@ -101,7 +102,8 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
                     DisplayOrder = v.DisplayOrder
                 })
                 .ToList(),
-            SuggestedSideItems = product.SuggestedSideItems
+                SuggestedSideItems = product.SuggestedSideItems
+                .Where(si => si.SideItemProduct != null) // Add this
                 .OrderBy(si => si.DisplayOrder)
                 .Select(si => new SideItemDto
                 {

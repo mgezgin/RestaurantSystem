@@ -111,7 +111,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         }
 
         _context.ProductDescriptions.RemoveRange(product.Descriptions);
-        
+
         var languageCodes = command.Content.Select(x => x.Key).ToList();
         var duplicateLanguageCodes = languageCodes.GroupBy(x => x)
             .Where(g => g.Count() > 1)
@@ -204,7 +204,9 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
-                _context.ProductSideItems.Add(productSideItem);
+                await _context.ProductSideItems.AddAsync(productSideItem);
+                product.SuggestedSideItems.Add(productSideItem);
+
             }
         }
 
@@ -219,7 +221,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                 .ThenInclude(si => si.SideItemProduct)
             .FirstAsync(p => p.Id == product.Id, cancellationToken);
 
-        var handler = new GetProductByIdQueryHandler(_context, _getProductlogger,_configuration);
+        var handler = new GetProductByIdQueryHandler(_context, _getProductlogger, _configuration);
         var result = await handler.Handle(new GetProductByIdQuery(product.Id), cancellationToken);
 
         _logger.LogInformation("Product {ProductId} updated successfully by user {UserId}",
