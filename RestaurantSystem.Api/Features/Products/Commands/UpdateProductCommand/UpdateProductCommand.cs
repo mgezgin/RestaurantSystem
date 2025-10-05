@@ -205,8 +205,6 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
                 await _context.ProductSideItems.AddAsync(productSideItem);
-                product.SuggestedSideItems.Add(productSideItem);
-
             }
         }
 
