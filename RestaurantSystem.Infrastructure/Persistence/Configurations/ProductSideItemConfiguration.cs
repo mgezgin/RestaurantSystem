@@ -23,12 +23,6 @@ public class ProductSideItemConfiguration : IEntityTypeConfiguration<ProductSide
             .HasForeignKey(psi => psi.MainProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Side Item Product relationship
-        builder.HasOne(psi => psi.SideItemProduct)
-            .WithMany(p => p.SideItemProducts)
-            .HasForeignKey(psi => psi.SideItemProductId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder.HasIndex(psi => psi.DisplayOrder);
     }
 }

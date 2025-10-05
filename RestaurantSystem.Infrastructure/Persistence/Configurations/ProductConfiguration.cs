@@ -51,12 +51,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasForeignKey(si => si.MainProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Configure navigation: Product is used as a side item (Side -> Main)
-        builder.HasMany(p => p.SideItemProducts)
-            .WithOne(si => si.SideItemProduct)
-            .HasForeignKey(si => si.SideItemProductId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         // Configure other relationships (optional, if needed)
         builder.HasMany(p => p.Images)
             .WithOne(p=>p.Product)
