@@ -1,11 +1,14 @@
 variables:
     IMAGE_NAME: $CI_REGISTRY_IMAGE
     IMAGE_TAG: $CI_PIPELINE_IID
+    MS_NAME: rumi-restaurant-backend
+    MS_VERSION: $CI_PIPELINE_IID
 
 stages:
 # - cache
 - test
 - build
+- deploy_pipeline
 
 # create_cache:
 #   stage: cache
@@ -88,6 +91,16 @@ trivy:
     when: always
     paths:
       - trivy.json
+
+trigger_deploy_pipeline:
+  stage: deploy_pipeline
+  variables:
+    MS_NAME: "rumi-restaurant-backend"
+    MS_VERSION: "$CI_PIPELINE_IID"
+  trigger:
+    project: restaurant-app3282120/rumi-argocd-gitops
+    branch: main
+    strategy: depend
 
 
 
