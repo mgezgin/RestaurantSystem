@@ -7,7 +7,7 @@ services:
     container_name: restaurant-api-dev
     ports:
       - "5221:8080"
-      - "7000:8081"
+      - "7001:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=restaurantdb;Username=postgres;Password=postgres123
