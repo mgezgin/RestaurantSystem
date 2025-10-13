@@ -29,8 +29,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApiRegistration();
 
 builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile("app-secrets.json", optional: false, reloadOnChange: true);
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("app-secrets.json", optional: true, reloadOnChange: true);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
