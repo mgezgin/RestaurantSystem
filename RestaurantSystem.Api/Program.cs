@@ -252,6 +252,25 @@ app.UseValidationExceptionHandling();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Health check endpoint for Kubernetes liveness/readiness probes
+app.MapGet("/health", () => Results.Ok(new 
+{ 
+    status = "healthy",
+    timestamp = DateTime.UtcNow,
+    service = "restaurant-system-api"
+}))
+.WithName("HealthCheck")
+.WithOpenApi();
+
+app.MapGet("/api/health", () => Results.Ok(new 
+{ 
+    status = "healthy",
+    timestamp = DateTime.UtcNow,
+    service = "restaurant-system-api"
+}))
+.WithName("ApiHealthCheck")
+.WithOpenApi();
+
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())
