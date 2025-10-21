@@ -6,6 +6,8 @@ public class ProductDescription : Entity
     public string Name { get; set; }
     public string Lang { get; set; }
     public string Description { get; set; }
+    public string Ingredient { get; set; }
+
     // Foreign key
     public Guid ProductId { get; set; }
 

@@ -132,6 +132,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                     Lang = languageCode,
                     Name = description.Name,
                     Description = description.Description,
+                    Ingredient = description.Ingredient,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
@@ -202,8 +203,6 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-
-       
     }
 
     private static ProductDto MapToProductDto(Product product)

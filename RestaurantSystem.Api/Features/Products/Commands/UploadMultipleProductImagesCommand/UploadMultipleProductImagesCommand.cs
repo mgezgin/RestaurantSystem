@@ -115,10 +115,10 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
                            cancellationToken: cancellationToken);
 
                     }
-                    catch
+                    catch(Exception ex)
                     {
+                        _logger.LogError(ex.Message, ex);
                         throw;
-
                     }
 
                     // Create image record
