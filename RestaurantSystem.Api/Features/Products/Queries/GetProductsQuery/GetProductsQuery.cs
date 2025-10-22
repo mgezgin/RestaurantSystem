@@ -130,7 +130,8 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 dto.Content[description.Lang] = new ProductDescriptionDto
                 {
                     Name = description.Name,
-                    Description = description.Description
+                    Description = description.Description,
+                    Ingredient = description.Ingredient
                 };
             }
 
