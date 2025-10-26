@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Common.Enums;
@@ -30,12 +31,18 @@ public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, ApiResponse<P
     private readonly ApplicationDbContext _context;
     private readonly ILogger<GetOrdersQueryHandler> _logger;
     private readonly IOrderMappingService _mappingService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetOrdersQueryHandler(ApplicationDbContext context, IOrderMappingService mappingService, ILogger<GetOrdersQueryHandler> logger)
+    public GetOrdersQueryHandler(
+        ApplicationDbContext context, 
+        IOrderMappingService mappingService, 
+        ILogger<GetOrdersQueryHandler> logger,
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _logger = logger;
         _mappingService = mappingService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<ApiResponse<PagedResult<OrderDto>>> Handle(GetOrdersQuery query, CancellationToken cancellationToken)
@@ -44,8 +51,15 @@ public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, ApiResponse<P
             .Include(o => o.Items)
             .Include(o => o.Payments)
             .Include(o => o.StatusHistory)
+            .Include(o => o.DeliveryAddress)
             .Where(o => !o.IsDeleted)
             .AsQueryable();
+
+        // For non-admin users, automatically filter to their own orders
+        if (!_currentUserService.IsAdmin && _currentUserService.UserId.HasValue)
+        {
+            ordersQuery = ordersQuery.Where(o => o.UserId == _currentUserService.UserId.Value);
+        }
 
         // Apply filters
         if (!string.IsNullOrEmpty(query.Status) && Enum.TryParse<OrderStatus>(query.Status, out var status))

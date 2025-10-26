@@ -2,6 +2,7 @@
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Common.Enums;
@@ -17,18 +18,24 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
     private readonly ILogger<CreateOrderCommandHandler> _logger;
     private readonly IOrderEventService _orderEventService;
     private readonly IOrderMappingService _mappingService;
+    private readonly IFidelityPointsService _fidelityPointsService;
+    private readonly ICustomerDiscountService _customerDiscountService;
 
     public CreateOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
         IOrderEventService orderEventService,
         IOrderMappingService mappingService,
+        IFidelityPointsService fidelityPointsService,
+        ICustomerDiscountService customerDiscountService,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
         _orderEventService = orderEventService;
         _mappingService = mappingService;
+        _fidelityPointsService = fidelityPointsService;
+        _customerDiscountService = customerDiscountService;
         _logger = logger;
     }
 
@@ -107,7 +114,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
 
                     var orderItem = new OrderItem
                     {
-                        OrderId = order.Id,
                         ProductId = itemDto.ProductId,
                         ProductVariationId = itemDto.ProductVariationId,
                         MenuId = itemDto.MenuId,
@@ -121,7 +127,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                     };
 
-                    _context.OrderItems.Add(orderItem);
                     order.Items.Add(orderItem);
                     subTotal += orderItem.ItemTotal;
 
@@ -156,7 +161,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
 
                     var orderItem = new OrderItem
                     {
-                        OrderId = order.Id,
                         ProductId = itemDto.ProductId,
                         ProductVariationId = itemDto.ProductVariationId,
                         MenuId = itemDto.MenuId,
@@ -170,7 +174,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                     };
 
-                    _context.OrderItems.Add(orderItem);
                     order.Items.Add(orderItem);
                     subTotal += orderItem.ItemTotal;
                 }
@@ -181,7 +184,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             order.Tax = CalculateTax(subTotal);
             order.DeliveryFee = command.Type == OrderType.Delivery ? CalculateDeliveryFee() : 0;
 
-            // Apply discount
+            // Apply user discount
             if (command.HasUserLimitDiscount && subTotal >= command.UserLimitAmount)
             {
                 var user = await _context.Users.FindAsync(userId);
@@ -192,7 +195,45 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 }
             }
 
-            order.Total = order.SubTotal + order.Tax + order.DeliveryFee - order.Discount;
+            // Apply customer-specific discount if available
+            if (userId.HasValue)
+            {
+                var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
+                    userId.Value, 
+                    subTotal, 
+                    cancellationToken);
+
+                if (customerDiscount != null)
+                {
+                    var discountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, subTotal);
+                    order.CustomerDiscountAmount = discountAmount;
+                    order.CustomerDiscountRuleId = customerDiscount.Id;
+                    
+                    // Apply the discount and increment usage count
+                    await _customerDiscountService.ApplyDiscountAsync(customerDiscount.Id, cancellationToken);
+                    
+                    _logger.LogInformation("Applied customer discount {DiscountName} of ${Amount} to order", 
+                        customerDiscount.Name, discountAmount);
+                }
+            }
+
+            // Handle fidelity points redemption (if requested)
+            // Note: This would come from command.PointsToRedeem in a future update
+            // For now, we'll just calculate points to earn
+
+            // Calculate total before fidelity discount
+            var totalBeforeFidelity = order.SubTotal + order.Tax + order.DeliveryFee - order.Discount - order.CustomerDiscountAmount;
+
+            // Calculate fidelity points to earn for this order
+            if (userId.HasValue)
+            {
+                var pointsToEarn = await _fidelityPointsService.CalculatePointsForOrderAsync(subTotal, cancellationToken);
+                order.FidelityPointsEarned = pointsToEarn;
+                
+                _logger.LogInformation("Order will earn {Points} fidelity points", pointsToEarn);
+            }
+
+            order.Total = totalBeforeFidelity - order.FidelityPointsDiscount;
 
             // Process payments
             decimal totalPaid = 0;
@@ -200,7 +241,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             {
                 var payment = new OrderPayment
                 {
-                    OrderId = order.Id,
                     PaymentMethod = paymentDto.PaymentMethod,
                     Amount = paymentDto.Amount,
                     Status = PaymentStatus.Pending,
@@ -215,7 +255,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
 
-                _context.OrderPayments.Add(payment);
                 order.Payments.Add(payment);
                 totalPaid += payment.Amount;
             }
@@ -241,18 +280,19 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             }
 
             // Add initial status history
-            var statusHistory = new OrderStatusHistory
-            {
-                OrderId = order.Id,
-                FromStatus = OrderStatus.Pending,
-                ToStatus = OrderStatus.Pending,
-                Notes = "Order created",
-                ChangedAt = DateTime.UtcNow,
-                ChangedBy = _currentUserService.UserId?.ToString() ?? "System",
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-            };
-            _context.OrderStatusHistories.Add(statusHistory);
+            // Add order status history
+        var statusHistory = new OrderStatusHistory
+        {
+            FromStatus = OrderStatus.Pending,
+            ToStatus = order.Status,
+            Notes = "Order created",
+            ChangedAt = DateTime.UtcNow,
+            ChangedBy = _currentUserService.UserId?.ToString() ?? "System",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+        };
+
+        order.StatusHistory.Add(statusHistory);
 
             // Calculate estimated delivery time
             if (command.Type == OrderType.Delivery)
@@ -261,6 +301,30 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             }
 
             await _context.SaveChangesAsync(cancellationToken);
+            
+            // Award fidelity points after successful order creation
+            if (userId.HasValue && order.FidelityPointsEarned > 0)
+            {
+                try
+                {
+                    await _fidelityPointsService.AwardPointsAsync(
+                        userId.Value, 
+                        order.Id, 
+                        order.FidelityPointsEarned, 
+                        order.SubTotal, 
+                        cancellationToken);
+                    
+                    _logger.LogInformation("Awarded {Points} fidelity points to user {UserId} for order {OrderNumber}",
+                        order.FidelityPointsEarned, userId, order.OrderNumber);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the order
+                    _logger.LogError(ex, "Failed to award fidelity points for order {OrderNumber}, but order was created successfully", 
+                        order.OrderNumber);
+                }
+            }
+            
             await transaction.CommitAsync(cancellationToken);
 
             // Map to DTO

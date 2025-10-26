@@ -16,6 +16,8 @@ using RestaurantSystem.Api.Common.Validation;
 using RestaurantSystem.Api.Features.Auth.Handlers;
 using RestaurantSystem.Api.Features.Basket.Interfaces;
 using RestaurantSystem.Api.Features.Basket.Services;
+using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
+using RestaurantSystem.Api.Features.FidelityPoints.Services;
 using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Api.Settings;
 using RestaurantSystem.Domain.Entities;
@@ -218,6 +220,9 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IBasketService, BasketService>();
 builder.Services.AddScoped<IBasketMergeService, BasketMergeService>();
 builder.Services.AddScoped<IOrderMappingService, OrderMappingService>();
+builder.Services.AddScoped<IPointEarningRuleService, PointEarningRuleService>();
+builder.Services.AddScoped<IFidelityPointsService, FidelityPointsService>();
+builder.Services.AddScoped<ICustomerDiscountService, CustomerDiscountService>();
 builder.Services.AddScoped<LoginEventHandler>();
 builder.Services.AddHostedService<BasketCleanupService>();
 

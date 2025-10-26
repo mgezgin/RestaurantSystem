@@ -41,6 +41,12 @@ namespace RestaurantSystem.Infrastructure.Persistence
 
         public DbSet<OrderAddress> OrderAddresses { get; set; }
 
+        // Fidelity Points & Discounts
+        public DbSet<FidelityPointsTransaction> FidelityPointsTransactions { get; set; }
+        public DbSet<FidelityPointBalance> FidelityPointBalances { get; set; }
+        public DbSet<PointEarningRule> PointEarningRules { get; set; }
+        public DbSet<CustomerDiscountRule> CustomerDiscountRules { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

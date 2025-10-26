@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RestaurantSystem.Infrastructure.Persistence;
+using RestaurantSystem.Infrastructure.Persistence.Seeders;
 
 
 namespace RestaurantSystem.Infrastructure.Extensions
@@ -19,10 +20,15 @@ namespace RestaurantSystem.Infrastructure.Extensions
                 logger.LogInformation("Applying migrations for database");
                 await dbContext.Database.MigrateAsync();
                 logger.LogInformation("Migrations successfully applied");
+
+                // Seed fidelity points data
+                logger.LogInformation("Seeding fidelity points data");
+                await FidelityPointsSeeder.SeedAsync(dbContext);
+                logger.LogInformation("Fidelity points data seeded successfully");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while applying migrations");
+                logger.LogError(ex, "An error occurred while applying migrations or seeding data");
                 throw;
             }
         }

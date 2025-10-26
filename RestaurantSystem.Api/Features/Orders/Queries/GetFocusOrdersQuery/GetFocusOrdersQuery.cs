@@ -32,6 +32,7 @@ public class GetFocusOrdersQueryHandler : IQueryHandler<GetFocusOrdersQuery, Api
         var ordersQuery = _context.Orders
             .Include(o => o.Items)
             .Include(o => o.Payments)
+            .Include(o => o.DeliveryAddress)
             .Where(o => !o.IsDeleted && o.IsFocusOrder);
 
         // Filter by active status
@@ -92,6 +93,24 @@ public class GetFocusOrdersQueryHandler : IQueryHandler<GetFocusOrdersQuery, Api
             EstimatedDeliveryTime = o.EstimatedDeliveryTime,
             ActualDeliveryTime = o.ActualDeliveryTime,
             Notes = o.Notes,
+            DeliveryAddress = o.DeliveryAddress != null ? new DeliveryAddressDto
+            {
+                Id = o.DeliveryAddress.Id,
+                OrderId = o.DeliveryAddress.OrderId,
+                UserAddressId = o.DeliveryAddress.UserAddressId,
+                Label = o.DeliveryAddress.Label,
+                AddressLine1 = o.DeliveryAddress.AddressLine1,
+                AddressLine2 = o.DeliveryAddress.AddressLine2,
+                City = o.DeliveryAddress.City,
+                State = o.DeliveryAddress.State,
+                PostalCode = o.DeliveryAddress.PostalCode,
+                Country = o.DeliveryAddress.Country,
+                Phone = o.DeliveryAddress.Phone,
+                Latitude = o.DeliveryAddress.Latitude,
+                Longitude = o.DeliveryAddress.Longitude,
+                DeliveryInstructions = o.DeliveryAddress.DeliveryInstructions,
+                FullAddress = o.DeliveryAddress.GetFullAddress()
+            } : null,
             Items = o.Items.Select(i => new OrderItemDto
             {
                 Id = i.Id,

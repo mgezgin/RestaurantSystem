@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Features.Auth.Commands.ChangePasswordCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.ForgotPasswordCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.LoginCommand;
 using RestaurantSystem.Api.Features.Auth.Commands.RefreshTokenCommand;
@@ -64,6 +65,17 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<string>>> ResetPassword([FromBody] ResetPasswordCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Change password for authenticated user
+    /// </summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<string>>> ChangePassword([FromBody] ChangePasswordCommand command)
     {
         var result = await _mediator.SendCommand(command);
         return Ok(result);

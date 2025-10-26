@@ -2,6 +2,9 @@
 
 public record BasketItemDto
 {
+    // Basket item identifier (required for updates/deletes)
+    public Guid? Id { get; set; }
+    
     // Product details
     public Guid? ProductId { get; set; }
     public string? ProductName { get; set; }

@@ -34,6 +34,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, ApiResp
                 .ThenInclude(i => i.ProductVariation)
             .Include(o => o.Payments)
             .Include(o => o.StatusHistory)
+            .Include(o => o.DeliveryAddress)
             .Include(o => o.User)
             .FirstOrDefaultAsync(o => o.Id == query.Id && !o.IsDeleted, cancellationToken);
 

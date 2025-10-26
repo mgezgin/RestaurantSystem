@@ -33,6 +33,13 @@ public class Order : SoftDeleteEntity
     public bool HasUserLimitDiscount { get; set; }
     public decimal UserLimitAmount { get; set; } // Threshold for discount
 
+    // Fidelity Points & Discounts
+    public int FidelityPointsEarned { get; set; } // Points earned from this order
+    public int FidelityPointsRedeemed { get; set; } // Points used for discount
+    public decimal FidelityPointsDiscount { get; set; } // Discount amount from redeemed points
+    public decimal CustomerDiscountAmount { get; set; } // Special customer discount amount
+    public Guid? CustomerDiscountRuleId { get; set; } // Reference to discount rule used
+
     // Status
     public OrderStatus Status { get; set; }
     public PaymentStatus PaymentStatus { get; set; }
@@ -57,7 +64,9 @@ public class Order : SoftDeleteEntity
     // Navigation properties
     public virtual ApplicationUser? User { get; set; }
     public virtual OrderAddress? DeliveryAddress { get; set; } // One-to-one relationship
+    public virtual CustomerDiscountRule? CustomerDiscountRule { get; set; }
     public virtual ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
     public virtual ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
     public virtual ICollection<OrderPayment> Payments { get; set; } = new List<OrderPayment>();
+    public virtual ICollection<FidelityPointsTransaction> FidelityPointsTransactions { get; set; } = new List<FidelityPointsTransaction>();
 }

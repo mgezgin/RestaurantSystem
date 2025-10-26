@@ -11,6 +11,7 @@ using RestaurantSystem.Api.Features.User.Commands.RegisterStaffCommand;
 using RestaurantSystem.Api.Features.User.Commands.UpdateUserDiscountsCommand;
 using RestaurantSystem.Api.Features.User.Commands.UpdateUserProfileCommand;
 using RestaurantSystem.Api.Features.User.Dtos;
+using RestaurantSystem.Api.Features.User.Queries.GetCurrentUserQuery;
 using RestaurantSystem.Api.Features.User.Queries.GetUsersQuery;
 
 namespace RestaurantSystem.Api.Features.User;
@@ -78,6 +79,18 @@ public class UserController : ControllerBase
     public async Task<ActionResult<ApiResponse<UserDto>>> UpdateProfile([FromBody] UpdateUserProfileCommand command)
     {
         var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get current user's profile
+    /// </summary>
+    [HttpGet("profile")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<UserDto>>> GetProfile()
+    {
+        var query = new GetCurrentUserQuery();
+        var result = await _mediator.SendQuery(query);
         return Ok(result);
     }
 

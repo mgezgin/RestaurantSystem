@@ -488,6 +488,7 @@ public class BasketService : IBasketService
             Notes = basket.Notes,
             Items = basket.Items.Select(item => new BasketItemDto
             {
+                Id = item.Id,
                 ProductId = item.ProductId,
                 ProductName = item.Product != null ? item.Product.Name : item.Menu?.Name ?? string.Empty,
                 MenuId = item.MenuId,
