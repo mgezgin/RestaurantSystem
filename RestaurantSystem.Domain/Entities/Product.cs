@@ -11,6 +11,8 @@ public class Product : SoftDeleteEntity
     public bool IsActive { get; set; } = true;
     public bool IsAvailable { get; set; } = true;
     public bool IsSpecial { get; set; } = false; // Is this a special menu (e.g., holiday menu)
+    public bool IsFeaturedSpecial { get; set; } = false; // Is this the featured/highlighted special of the day
+    public DateTime? FeaturedDate { get; set; } // Date when this was set as featured
     public int PreparationTimeMinutes { get; set; }
     public ProductType Type { get; set; } = ProductType.MainItem;
     public List<string>? Ingredients { get; set; } // JSON array of ingredients
