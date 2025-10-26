@@ -4,6 +4,7 @@ using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Basket.Dtos;
 using RestaurantSystem.Api.Features.Basket.Dtos.Requests;
 using RestaurantSystem.Api.Features.Basket.Interfaces;
+using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 using System.Text.Json;
@@ -15,6 +16,7 @@ public class BasketService : IBasketService
     private readonly ApplicationDbContext _context;
     private readonly IDistributedCache _cache;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ICustomerDiscountService _customerDiscountService;
     private readonly ILogger<BasketService> _logger;
     private readonly IConfiguration _configuration;
 
@@ -26,12 +28,14 @@ public class BasketService : IBasketService
        ApplicationDbContext context,
        IDistributedCache cache,
        ICurrentUserService currentUserService,
+       ICustomerDiscountService customerDiscountService,
        ILogger<BasketService> logger,
        IConfiguration configuration)
     {
         _context = context;
         _cache = cache;
         _currentUserService = currentUserService;
+        _customerDiscountService = customerDiscountService;
         _logger = logger;
         _configuration = configuration;
     }
@@ -52,7 +56,7 @@ public class BasketService : IBasketService
         if (basket == null)
             return null;
 
-        var basketDto = MapToBasketDto(basket);
+        var basketDto = await MapToBasketDtoAsync(basket);
 
         // Cache the result
         await CacheBasketAsync(cacheKey, basketDto);
@@ -278,7 +282,7 @@ public class BasketService : IBasketService
         // Invalidate cache
         await InvalidateBasketCacheAsync(sessionId, basket.UserId);
 
-        return MapToBasketDto(basket);
+        return await MapToBasketDtoAsync(basket);
     }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -331,8 +335,8 @@ public class BasketService : IBasketService
         if (anonymousBasket == null)
         {
             return userBasket != null
-                ? MapToBasketDto(userBasket)
-                : MapToBasketDto(await GetOrCreateBasketAsync(sessionId, userId));
+                ? await MapToBasketDtoAsync(userBasket)
+                : await MapToBasketDtoAsync(await GetOrCreateBasketAsync(sessionId, userId));
         }
 
         if (userBasket == null)
@@ -347,7 +351,7 @@ public class BasketService : IBasketService
             await InvalidateBasketCacheAsync(sessionId, null);
             await InvalidateBasketCacheAsync(sessionId, userId);
 
-            return MapToBasketDto(anonymousBasket);
+            return await MapToBasketDtoAsync(anonymousBasket);
         }
 
         // Merge anonymous items into user basket
@@ -412,7 +416,30 @@ public class BasketService : IBasketService
 
         basket.SubTotal = subTotal;
         basket.Tax = Math.Round(subTotal * TAX_RATE, 2);
-        basket.Total = basket.SubTotal + basket.Tax + basket.DeliveryFee - basket.Discount;
+
+        // Calculate customer discount if user is logged in
+        decimal customerDiscountAmount = 0;
+        if (basket.UserId.HasValue && basket.UserId.Value != Guid.Empty)
+        {
+            var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
+                basket.UserId.Value,
+                subTotal
+            );
+
+            if (customerDiscount != null)
+            {
+                customerDiscountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, subTotal);
+                _logger.LogInformation(
+                    "Applied customer discount '{DiscountName}' (ID: {DiscountId}) to basket {BasketId}: {DiscountAmount:C}",
+                    customerDiscount.Name,
+                    customerDiscount.Id,
+                    basket.Id,
+                    customerDiscountAmount
+                );
+            }
+        }
+
+        basket.Total = basket.SubTotal + basket.Tax + basket.DeliveryFee - basket.Discount - customerDiscountAmount;
         basket.UpdatedAt = DateTime.UtcNow;
         basket.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
 
@@ -470,8 +497,23 @@ public class BasketService : IBasketService
         return await query.FirstOrDefaultAsync();
     }
 
-    private BasketDto MapToBasketDto(Domain.Entities.Basket basket)
+    private async Task<BasketDto> MapToBasketDtoAsync(Domain.Entities.Basket basket)
     {
+        // Calculate customer discount if user is logged in
+        decimal customerDiscountAmount = 0;
+        if (basket.UserId.HasValue && basket.UserId.Value != Guid.Empty)
+        {
+            var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
+                basket.UserId.Value,
+                basket.SubTotal
+            );
+
+            if (customerDiscount != null)
+            {
+                customerDiscountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, basket.SubTotal);
+            }
+        }
+
         return new BasketDto
         {
             Id = basket.Id,
@@ -481,6 +523,7 @@ public class BasketService : IBasketService
             Tax = basket.Tax,
             DeliveryFee = basket.DeliveryFee,
             Discount = basket.Discount,
+            CustomerDiscount = customerDiscountAmount,
             Total = basket.Total,
             PromoCode = basket.PromoCode,
             TotalItems = basket.Items.Sum(i => i.Quantity),

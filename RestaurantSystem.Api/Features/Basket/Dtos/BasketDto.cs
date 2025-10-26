@@ -8,7 +8,8 @@ public record BasketDto
     public decimal SubTotal { get; set; }
     public decimal Tax { get; set; }
     public decimal DeliveryFee { get; set; }
-    public decimal Discount { get; set; }
+    public decimal Discount { get; set; } // Promo code discount
+    public decimal CustomerDiscount { get; set; } // Customer-specific discount
     public decimal Total { get; set; }
     public string? PromoCode { get; set; }
     public int TotalItems { get; set; }
