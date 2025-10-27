@@ -34,6 +34,8 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations.OrderBy(v => v.DisplayOrder))
+            .Include(p => p.DetailedIngredients.Where(di => di.IsActive).OrderBy(di => di.DisplayOrder))
+                .ThenInclude(di => di.Descriptions)
             .Include(p => p.SuggestedSideItems) // Add soft delete filter here
                 .ThenInclude(si => si.SideItemProduct)
                     .ThenInclude(product => product!.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
@@ -58,6 +60,25 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             Ingredients = product.Ingredients,
             Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,
+            DetailedIngredients = product.DetailedIngredients
+                .Select(di => new ProductIngredientDto
+                {
+                    Id = di.Id,
+                    Name = di.Name,
+                    IsOptional = di.IsOptional,
+                    Price = di.Price,
+                    IsActive = di.IsActive,
+                    DisplayOrder = di.DisplayOrder,
+                    Content = di.Descriptions.ToDictionary(
+                        d => d.LanguageCode,
+                        d => new ProductIngredientContentDto
+                        {
+                            Name = d.Name,
+                            Description = d.Description
+                        }
+                    )
+                })
+                .ToList(),
             Images = product.Images.Select(i => new ProductImageDto
             {
                 Id = i.Id,

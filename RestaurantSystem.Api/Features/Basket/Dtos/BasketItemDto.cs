@@ -24,4 +24,15 @@ public record BasketItemDto
     public decimal UnitPrice { get; set; }
     public decimal ItemTotal { get; set; }
     public string? SpecialInstructions { get; set; }
+    
+    // Customization fields for optional ingredients
+    public List<Guid>? SelectedIngredients { get; set; }
+    public List<Guid>? ExcludedIngredients { get; set; }
+    public List<Guid>? AddedIngredients { get; set; }
+    public decimal CustomizationPrice { get; set; }
+    
+    // Ingredient names for display purposes
+    public List<string>? SelectedIngredientNames { get; set; }
+    public List<string>? ExcludedIngredientNames { get; set; }
+    public List<string>? AddedIngredientNames { get; set; }
 }

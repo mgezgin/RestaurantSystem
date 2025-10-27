@@ -144,6 +144,7 @@ public class BasketService : IBasketService
             // Validate product exists and is available
             var product = await _context.Products
                 .Include(p => p.Variations)
+                .Include(p => p.DetailedIngredients)
                 .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.IsActive && p.IsAvailable);
 
             if (product == null)
@@ -158,25 +159,61 @@ public class BasketService : IBasketService
                     throw new InvalidOperationException("Product variation not found or unavailable");
             }
 
-            // Check if item already exists in basket
+            // Check if item with EXACT same customizations already exists in basket
             var existingItem = await _context.BasketItems
-                .FirstOrDefaultAsync(bi =>
+                .Where(bi =>
                     bi.BasketId == basket.Id &&
                     bi.ProductId == item.ProductId &&
-                    bi.ProductVariationId == item.ProductVariationId);
+                    bi.ProductVariationId == item.ProductVariationId)
+                .ToListAsync();
 
-            if (existingItem != null)
+            // Find exact match including customizations
+            var exactMatch = existingItem.FirstOrDefault(bi =>
             {
-                // Update quantity
-                existingItem.Quantity += item.Quantity;
-                existingItem.ItemTotal = existingItem.Quantity * existingItem.UnitPrice;
-                existingItem.UpdatedAt = DateTime.UtcNow;
-                existingItem.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
+                // Compare special instructions
+                var sameInstructions = (bi.SpecialInstructions ?? "") == (item.SpecialInstructions ?? "");
+                
+                // Compare selected ingredients lists
+                var biSelected = bi.SelectedIngredients ?? new List<Guid>();
+                var itemSelected = item.SelectedIngredients ?? new List<Guid>();
+                var sameSelected = biSelected.Count == itemSelected.Count && 
+                                   biSelected.OrderBy(x => x).SequenceEqual(itemSelected.OrderBy(x => x));
+                
+                // Compare excluded ingredients lists  
+                var biExcluded = bi.ExcludedIngredients ?? new List<Guid>();
+                var itemExcluded = item.ExcludedIngredients ?? new List<Guid>();
+                var sameExcluded = biExcluded.Count == itemExcluded.Count && 
+                                   biExcluded.OrderBy(x => x).SequenceEqual(itemExcluded.OrderBy(x => x));
+                
+                return sameInstructions && sameSelected && sameExcluded;
+            });
+
+            if (exactMatch != null)
+            {
+                // Update quantity of existing item with same customizations
+                exactMatch.Quantity += item.Quantity;
+                exactMatch.ItemTotal = exactMatch.Quantity * exactMatch.UnitPrice;
+                exactMatch.UpdatedAt = DateTime.UtcNow;
+                exactMatch.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
             }
             else
             {
                 // Calculate unit price
                 var unitPrice = product.BasePrice + (variation?.PriceModifier ?? 0);
+
+                // Calculate customization price from optional ingredients
+                decimal customizationPrice = 0;
+                if (item.SelectedIngredients != null && item.SelectedIngredients.Count > 0 && product.DetailedIngredients != null)
+                {
+                    foreach (var ingredientId in item.SelectedIngredients)
+                    {
+                        var ingredient = product.DetailedIngredients.FirstOrDefault(i => i.Id == ingredientId && i.IsOptional && i.IsActive);
+                        if (ingredient != null)
+                        {
+                            customizationPrice += ingredient.Price;
+                        }
+                    }
+                }
 
                 // Create new basket item
                 var basketItem = new BasketItem
@@ -186,8 +223,12 @@ public class BasketService : IBasketService
                     ProductVariationId = item.ProductVariationId,
                     Quantity = item.Quantity,
                     UnitPrice = unitPrice,
-                    ItemTotal = unitPrice * item.Quantity,
+                    ItemTotal = (unitPrice + customizationPrice) * item.Quantity,
                     SpecialInstructions = item.SpecialInstructions,
+                    SelectedIngredients = item.SelectedIngredients,
+                    ExcludedIngredients = item.ExcludedIngredients,
+                    AddedIngredients = item.AddedIngredients,
+                    CustomizationPrice = customizationPrice,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
@@ -473,6 +514,7 @@ public class BasketService : IBasketService
         var query = _context.Baskets
             .Include(b => b.Items)
                 .ThenInclude(bi => bi.Product)
+                    .ThenInclude(p => p.DetailedIngredients)
             .Include(b => b.Items)
                 .ThenInclude(bi => bi.ProductVariation)
             .Include(b => b.Items)
@@ -529,20 +571,45 @@ public class BasketService : IBasketService
             TotalItems = basket.Items.Sum(i => i.Quantity),
             ExpiresAt = basket.ExpiresAt,
             Notes = basket.Notes,
-            Items = basket.Items.Select(item => new BasketItemDto
+            Items = basket.Items.Select(item =>
             {
-                Id = item.Id,
-                ProductId = item.ProductId,
-                ProductName = item.Product != null ? item.Product.Name : item.Menu?.Name ?? string.Empty,
-                MenuId = item.MenuId,
-                ProductDescription = item.Product != null ? item.Product.Description : item.Menu?.Description ?? string.Empty,
-                ProductImageUrl = item.Product?.ImageUrl ?? string.Empty,
-                ProductVariationId = item.ProductVariationId,
-                VariationName = item.ProductVariation?.Name,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                ItemTotal = item.ItemTotal,
-                SpecialInstructions = item.SpecialInstructions
+                // Get ingredient names from product's detailed ingredients
+                var productIngredients = item.Product?.DetailedIngredients ?? new List<ProductIngredient>();
+                
+                var selectedNames = item.SelectedIngredients?
+                    .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
+                    .ToList();
+                    
+                var excludedNames = item.ExcludedIngredients?
+                    .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
+                    .ToList();
+                    
+                var addedNames = item.AddedIngredients?
+                    .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
+                    .ToList();
+
+                return new BasketItemDto
+                {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    ProductName = item.Product != null ? item.Product.Name : item.Menu?.Name ?? string.Empty,
+                    MenuId = item.MenuId,
+                    ProductDescription = item.Product != null ? item.Product.Description : item.Menu?.Description ?? string.Empty,
+                    ProductImageUrl = item.Product?.ImageUrl ?? string.Empty,
+                    ProductVariationId = item.ProductVariationId,
+                    VariationName = item.ProductVariation?.Name,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    ItemTotal = item.ItemTotal,
+                    SpecialInstructions = item.SpecialInstructions,
+                    SelectedIngredients = item.SelectedIngredients,
+                    ExcludedIngredients = item.ExcludedIngredients,
+                    AddedIngredients = item.AddedIngredients,
+                    CustomizationPrice = item.CustomizationPrice,
+                    SelectedIngredientNames = selectedNames,
+                    ExcludedIngredientNames = excludedNames,
+                    AddedIngredientNames = addedNames
+                };
             }).ToList()
         };
     }

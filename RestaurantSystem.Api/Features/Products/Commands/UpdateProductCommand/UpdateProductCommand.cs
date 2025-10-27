@@ -27,6 +27,7 @@ public record UpdateProductCommand(
     Guid? PrimaryCategoryId,
     List<UpdateProductVariationDto>? Variations,
     List<Guid>? SuggestedSideItemIds,
+    List<ProductIngredientDto>? DetailedIngredients,
     ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
@@ -60,6 +61,8 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             .Include(p => p.ProductCategories)
             .Include(p => p.Variations)
             .Include(p => p.SuggestedSideItems)
+            .Include(p => p.DetailedIngredients)
+                .ThenInclude(di => di.Descriptions)
             .FirstOrDefaultAsync(p => p.Id == command.Id, cancellationToken);
 
         if (product == null)
@@ -189,6 +192,50 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
                 await _context.ProductSideItems.AddAsync(productSideItem,cancellationToken);
+            }
+        }
+
+        // Update detailed ingredients
+        if (command.DetailedIngredients != null)
+        {
+            // Remove existing ingredients and their descriptions
+            var existingIngredients = product.DetailedIngredients.ToList();
+            _context.ProductIngredients.RemoveRange(existingIngredients);
+
+            // Add new ingredients
+            foreach (var ingredientDto in command.DetailedIngredients)
+            {
+                var ingredient = new ProductIngredient
+                {
+                    ProductId = product.Id,
+                    Name = ingredientDto.Name,
+                    IsOptional = ingredientDto.IsOptional,
+                    Price = ingredientDto.Price,
+                    IsActive = ingredientDto.IsActive,
+                    DisplayOrder = ingredientDto.DisplayOrder,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+
+                await _context.ProductIngredients.AddAsync(ingredient, cancellationToken);
+
+                // Add ingredient descriptions
+                if (ingredientDto.Content != null)
+                {
+                    foreach (var (languageCode, content) in ingredientDto.Content)
+                    {
+                        var description = new ProductIngredientDescription
+                        {
+                            ProductIngredient = ingredient,
+                            LanguageCode = languageCode,
+                            Name = content.Name,
+                            Description = content.Description,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                        };
+                        await _context.ProductIngredientDescriptions.AddAsync(description, cancellationToken);
+                    }
+                }
             }
         }
 

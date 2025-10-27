@@ -43,6 +43,8 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations)
             .Include(p => p.SuggestedSideItems)
+            .Include(p => p.DetailedIngredients.Where(di => di.IsActive).OrderBy(di => di.DisplayOrder))
+                .ThenInclude(di => di.Descriptions)
             .AsQueryable();
 
         // Apply filters
@@ -106,6 +108,25 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 Type = p.Type,
                 Allergens = p.Allergens,
                 Ingredients = p.Ingredients,
+                DetailedIngredients = p.DetailedIngredients
+                    .Select(di => new ProductIngredientDto
+                    {
+                        Id = di.Id,
+                        Name = di.Name,
+                        IsOptional = di.IsOptional,
+                        Price = di.Price,
+                        IsActive = di.IsActive,
+                        DisplayOrder = di.DisplayOrder,
+                        Content = di.Descriptions.ToDictionary(
+                            d => d.LanguageCode,
+                            d => new ProductIngredientContentDto
+                            {
+                                Name = d.Name,
+                                Description = d.Description
+                            }
+                        )
+                    })
+                    .ToList(),
                 Images = p.Images.Select(s => new ProductImageDto
                 {
                     Id = s.Id,

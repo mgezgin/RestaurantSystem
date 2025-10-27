@@ -7,5 +7,10 @@ public record AddToBasketDto
     public Guid? MenuId { get; set; }
     public int Quantity { get; set; } = 1;
     public string? SpecialInstructions { get; set; }
+    
+    // Customization fields for optional ingredients
+    public List<Guid>? SelectedIngredients { get; set; }
+    public List<Guid>? ExcludedIngredients { get; set; }
+    public List<Guid>? AddedIngredients { get; set; }
 }
 

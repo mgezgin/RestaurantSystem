@@ -22,6 +22,8 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<ProductVariation> ProductVariations { get; set; }
         public DbSet<ProductSideItem> ProductSideItems { get; set; }
         public DbSet<ProductDescription> ProductDescriptions { get; set; }
+        public DbSet<ProductIngredient> ProductIngredients { get; set; }
+        public DbSet<ProductIngredientDescription> ProductIngredientDescriptions { get; set; }
         public DbSet<Menu> Menus { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
 

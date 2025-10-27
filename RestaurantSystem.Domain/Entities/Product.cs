@@ -24,6 +24,7 @@ public class Product : SoftDeleteEntity
     public virtual ICollection<ProductCategory> ProductCategories { get; set; } = new List<ProductCategory>();
     public virtual ICollection<ProductVariation> Variations { get; set; } = [];
     public virtual ICollection<ProductSideItem> SuggestedSideItems { get; set; } = [];
+    public virtual ICollection<ProductIngredient> DetailedIngredients { get; set; } = [];
     public virtual ICollection<MenuItem> MenuProducts { get; set; } = [];
     public virtual ICollection<ProductDescription> Descriptions { get; set; } = [];
 

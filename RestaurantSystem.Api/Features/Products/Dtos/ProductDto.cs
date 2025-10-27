@@ -18,6 +18,7 @@ public record ProductDto
     public int PreparationTimeMinutes { get; init; }
     public ProductType Type { get; init; }
     public List<string>? Ingredients { get; init; } = [];
+    public List<ProductIngredientDto>? DetailedIngredients { get; init; } = [];
     public List<string>? Allergens { get; init; } = [];
     public int DisplayOrder { get; init; }
     public ProductDescriptionsDto Content { get; set; } = new();

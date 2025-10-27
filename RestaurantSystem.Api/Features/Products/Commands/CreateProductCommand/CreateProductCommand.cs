@@ -25,6 +25,7 @@ public record CreateProductCommand(
     Guid? PrimaryCategoryId,
     List<CreateProductVariationDto>? Variations,
     List<Guid>? SuggestedSideItemIds,
+    List<ProductIngredientDto>? DetailedIngredients,
     ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
@@ -178,6 +179,47 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 }
             }
 
+            // Add detailed ingredients
+            if (command.DetailedIngredients?.Any() == true)
+            {
+                foreach (var ingredientDto in command.DetailedIngredients)
+                {
+                    var ingredient = new ProductIngredient
+                    {
+                        ProductId = product.Id,
+                        Name = ingredientDto.Name,
+                        IsOptional = ingredientDto.IsOptional,
+                        Price = ingredientDto.Price,
+                        IsActive = ingredientDto.IsActive,
+                        DisplayOrder = ingredientDto.DisplayOrder,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+
+                    _context.ProductIngredients.Add(ingredient);
+                    product.DetailedIngredients.Add(ingredient);
+
+                    // Add ingredient descriptions
+                    if (ingredientDto.Content != null)
+                    {
+                        foreach (var (languageCode, content) in ingredientDto.Content)
+                        {
+                            var description = new ProductIngredientDescription
+                            {
+                                ProductIngredient = ingredient,
+                                LanguageCode = languageCode,
+                                Name = content.Name,
+                                Description = content.Description,
+                                CreatedAt = DateTime.UtcNow,
+                                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                            };
+                            _context.ProductIngredientDescriptions.Add(description);
+                            ingredient.Descriptions.Add(description);
+                        }
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
@@ -188,6 +230,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 .Include(p => p.Variations)
                 .Include(p => p.SuggestedSideItems)
                     .ThenInclude(si => si.SideItemProduct)
+                .Include(p => p.DetailedIngredients)
+                    .ThenInclude(di => di.Descriptions)
                 .FirstAsync(p => p.Id == product.Id, cancellationToken);
 
             var productDto = MapToProductDto(createdProduct);
@@ -220,6 +264,23 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             Ingredients = product.Ingredients,
             Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,
+            DetailedIngredients = product.DetailedIngredients.Select(di => new ProductIngredientDto
+            {
+                Id = di.Id,
+                Name = di.Name,
+                IsOptional = di.IsOptional,
+                Price = di.Price,
+                IsActive = di.IsActive,
+                DisplayOrder = di.DisplayOrder,
+                Content = di.Descriptions.ToDictionary(
+                    d => d.LanguageCode,
+                    d => new ProductIngredientContentDto
+                    {
+                        Name = d.Name,
+                        Description = d.Description
+                    }
+                )
+            }).ToList(),
             Categories = product.ProductCategories.Select(pc => new ProductCategoryDto
             {
                 CategoryId = pc.CategoryId,
