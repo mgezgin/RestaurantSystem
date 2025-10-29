@@ -215,6 +215,31 @@ public class BasketService : IBasketService
                     }
                 }
 
+                // Calculate side items price
+                if (item.SelectedSideItems != null && item.SelectedSideItems.Count > 0)
+                {
+                    var sideItemIds = item.SelectedSideItems.Select(s => s.Id).ToList();
+                    var sideItems = await _context.Products
+                        .Where(p => sideItemIds.Contains(p.Id) && p.IsActive && p.IsAvailable)
+                        .ToListAsync();
+
+                    foreach (var selectedSide in item.SelectedSideItems)
+                    {
+                        var sideItem = sideItems.FirstOrDefault(s => s.Id == selectedSide.Id);
+                        if (sideItem != null)
+                        {
+                            customizationPrice += sideItem.BasePrice * selectedSide.Quantity;
+                        }
+                    }
+                }
+
+                // Serialize selected side items to JSON
+                string? selectedSideItemsJson = null;
+                if (item.SelectedSideItems != null && item.SelectedSideItems.Count > 0)
+                {
+                    selectedSideItemsJson = JsonSerializer.Serialize(item.SelectedSideItems);
+                }
+
                 // Create new basket item
                 var basketItem = new BasketItem
                 {
@@ -229,11 +254,10 @@ public class BasketService : IBasketService
                     ExcludedIngredients = item.ExcludedIngredients,
                     AddedIngredients = item.AddedIngredients,
                     CustomizationPrice = customizationPrice,
+                    SelectedSideItemsJson = selectedSideItemsJson,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
-
-                // Add side items if any
 
                 _context.BasketItems.Add(basketItem);
             }
@@ -571,22 +595,62 @@ public class BasketService : IBasketService
             TotalItems = basket.Items.Sum(i => i.Quantity),
             ExpiresAt = basket.ExpiresAt,
             Notes = basket.Notes,
-            Items = basket.Items.Select(item =>
+            Items = (await Task.WhenAll(basket.Items.Select(async item =>
             {
                 // Get ingredient names from product's detailed ingredients
                 var productIngredients = item.Product?.DetailedIngredients ?? new List<ProductIngredient>();
-                
+
                 var selectedNames = item.SelectedIngredients?
                     .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
                     .ToList();
-                    
+
                 var excludedNames = item.ExcludedIngredients?
                     .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
                     .ToList();
-                    
+
                 var addedNames = item.AddedIngredients?
                     .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
                     .ToList();
+
+                // Deserialize and fetch side items details
+                List<BasketSideItemDto>? selectedSideItems = null;
+                if (!string.IsNullOrEmpty(item.SelectedSideItemsJson))
+                {
+                    try
+                    {
+                        var selectedSides = JsonSerializer.Deserialize<List<SelectedSideItemDto>>(item.SelectedSideItemsJson);
+                        if (selectedSides != null && selectedSides.Count > 0)
+                        {
+                            var sideItemIds = selectedSides.Select(s => s.Id).ToList();
+                            var sideItems = await _context.Products
+                                .Where(p => sideItemIds.Contains(p.Id))
+                                .ToListAsync();
+
+                            selectedSideItems = selectedSides.Select(selectedSide =>
+                            {
+                                var sideItem = sideItems.FirstOrDefault(s => s.Id == selectedSide.Id);
+                                if (sideItem != null)
+                                {
+                                    return new BasketSideItemDto
+                                    {
+                                        Id = sideItem.Id,
+                                        Name = sideItem.Name,
+                                        Description = sideItem.Description,
+                                        Price = sideItem.BasePrice,
+                                        ImageUrl = sideItem.ImageUrl,
+                                        Quantity = selectedSide.Quantity,
+                                        SubTotal = sideItem.BasePrice * selectedSide.Quantity
+                                    };
+                                }
+                                return null;
+                            }).Where(s => s != null).ToList()!;
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize side items JSON for basket item {BasketItemId}", item.Id);
+                    }
+                }
 
                 return new BasketItemDto
                 {
@@ -608,9 +672,10 @@ public class BasketService : IBasketService
                     CustomizationPrice = item.CustomizationPrice,
                     SelectedIngredientNames = selectedNames,
                     ExcludedIngredientNames = excludedNames,
-                    AddedIngredientNames = addedNames
+                    AddedIngredientNames = addedNames,
+                    SelectedSideItems = selectedSideItems
                 };
-            }).ToList()
+            }))).ToList()
         };
     }
 

@@ -43,6 +43,8 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations)
             .Include(p => p.SuggestedSideItems)
+                .ThenInclude(si => si.SideItemProduct)
+                    .ThenInclude(sip => sip.Images)
             .Include(p => p.DetailedIngredients.Where(di => di.IsActive).OrderBy(di => di.DisplayOrder))
                 .ThenInclude(di => di.Descriptions)
             .AsQueryable();
@@ -141,7 +143,30 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                     .Select(pc => pc.Category.Name)
                     .FirstOrDefault(),
                 VariationCount = p.Variations.Count,
-                SideItemCount = p.SuggestedSideItems.Count,
+                SuggestedSideItems = p.SuggestedSideItems
+                    .Where(si => si.SideItemProduct != null)
+                    .OrderBy(si => si.DisplayOrder)
+                    .Select(si => new SideItemDto
+                    {
+                        Id = si.SideItemProduct.Id,
+                        Name = si.SideItemProduct.Name,
+                        Description = si.SideItemProduct.Description,
+                        Price = si.SideItemProduct.BasePrice,
+                        IsRequired = si.IsRequired,
+                        DisplayOrder = si.DisplayOrder,
+                        Images = si.SideItemProduct.Images
+                            .Select(i => new ProductImageDto
+                            {
+                                Id = i.Id,
+                                Url = _baseUrl + "/" + i.Url,
+                                AltText = i.AltText,
+                                IsPrimary = i.IsPrimary,
+                                SortOrder = i.SortOrder,
+                                ProductId = i.ProductId
+                            })
+                            .ToList()
+                    })
+                    .ToList(),
                 Content = new() // Initialize Content dictionary
             };
 
@@ -151,8 +176,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 dto.Content[description.Lang] = new ProductDescriptionDto
                 {
                     Name = description.Name,
-                    Description = description.Description,
-                    Ingredient = description.Ingredient
+                    Description = description.Description
                 };
             }
 

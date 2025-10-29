@@ -21,5 +21,5 @@ public record ProductSummaryDto
     public ProductDescriptionsDto Content { get; set; } = new();
     public string? PrimaryCategoryName { get; init; }
     public int VariationCount { get; init; }
-    public int SideItemCount { get; init; }
+    public List<SideItemDto> SuggestedSideItems { get; init; } = [];
 }

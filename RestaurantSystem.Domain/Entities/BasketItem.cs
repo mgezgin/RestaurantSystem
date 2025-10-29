@@ -18,6 +18,9 @@ public class BasketItem : Entity
     public List<Guid>? AddedIngredients { get; set; } // IDs of optional ingredients added
     public decimal CustomizationPrice { get; set; } = 0; // Additional price from customizations
 
+    // Selected side items (stored as JSON: {id, quantity} pairs)
+    public string? SelectedSideItemsJson { get; set; }
+
     // Navigation properties
     public virtual Basket Basket { get; set; } = null!;
     public virtual Product? Product { get; set; } = null!;

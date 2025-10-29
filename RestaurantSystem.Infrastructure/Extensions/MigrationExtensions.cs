@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.Infrastructure.Persistence.Seeders;
 
@@ -13,6 +15,8 @@ namespace RestaurantSystem.Infrastructure.Extensions
         {
             using var scope = serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
 
             try
@@ -25,6 +29,11 @@ namespace RestaurantSystem.Infrastructure.Extensions
                 logger.LogInformation("Seeding fidelity points data");
                 await FidelityPointsSeeder.SeedAsync(dbContext);
                 logger.LogInformation("Fidelity points data seeded successfully");
+
+                // Seed admin user role
+                logger.LogInformation("Seeding admin user role");
+                await AdminUserSeeder.SeedAsync(dbContext, userManager, roleManager);
+                logger.LogInformation("Admin user role seeded successfully");
             }
             catch (Exception ex)
             {

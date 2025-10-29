@@ -83,7 +83,8 @@ public class BasketController : ControllerBase
             request.SpecialInstructions,
             request.SelectedIngredients,
             request.ExcludedIngredients,
-            request.AddedIngredients);
+            request.AddedIngredients,
+            request.SelectedSideItems);
 
         var result = await _mediator.SendCommand(command);
         return Ok(result);

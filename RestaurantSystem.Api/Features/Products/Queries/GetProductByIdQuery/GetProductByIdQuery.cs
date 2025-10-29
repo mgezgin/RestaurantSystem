@@ -154,8 +154,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             productDto.Content[description.Lang] = new ProductDescriptionDto
             {
                 Name = description.Name,
-                Description = description.Description,
-                Ingredient = description.Ingredient
+                Description = description.Description
             };
         }
 

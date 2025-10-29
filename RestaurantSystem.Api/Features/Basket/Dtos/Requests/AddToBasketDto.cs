@@ -12,5 +12,13 @@ public record AddToBasketDto
     public List<Guid>? SelectedIngredients { get; set; }
     public List<Guid>? ExcludedIngredients { get; set; }
     public List<Guid>? AddedIngredients { get; set; }
+
+    // Selected side items with quantities
+    public List<SelectedSideItemDto>? SelectedSideItems { get; set; }
 }
 
+public record SelectedSideItemDto
+{
+    public Guid Id { get; set; }
+    public int Quantity { get; set; }
+}

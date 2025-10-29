@@ -35,4 +35,7 @@ public record BasketItemDto
     public List<string>? SelectedIngredientNames { get; set; }
     public List<string>? ExcludedIngredientNames { get; set; }
     public List<string>? AddedIngredientNames { get; set; }
+
+    // Selected side items (with quantities)
+    public List<BasketSideItemDto>? SelectedSideItems { get; set; }
 }
