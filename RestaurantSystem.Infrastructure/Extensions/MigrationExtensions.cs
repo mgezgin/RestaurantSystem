@@ -29,6 +29,11 @@ namespace RestaurantSystem.Infrastructure.Extensions
                 logger.LogInformation("Seeding fidelity points data");
                 await FidelityPointsSeeder.SeedAsync(dbContext);
                 logger.LogInformation("Fidelity points data seeded successfully");
+
+                // Seed tables data
+                logger.LogInformation("Seeding tables data");
+                await TableSeeder.SeedAsync(dbContext, logger);
+                logger.LogInformation("Tables data seeded successfully");
             }
             catch (Exception ex)
             {

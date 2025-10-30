@@ -49,6 +49,10 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<PointEarningRule> PointEarningRules { get; set; }
         public DbSet<CustomerDiscountRule> CustomerDiscountRules { get; set; }
 
+        // Reservation-related DbSets
+        public DbSet<Table> Tables { get; set; }
+        public DbSet<Reservation> Reservations { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

@@ -180,6 +180,53 @@ public class EmailService : IEmailService
         }
     }
 
+    public async Task SendReservationConfirmationEmailAsync(string customerEmail, string customerName, string tableNumber,
+        DateTime reservationDate, TimeSpan startTime, TimeSpan endTime, int numberOfGuests, string? specialRequests = null)
+    {
+        try
+        {
+            var subject = EmailTemplates.ReservationConfirmation.Subject;
+            var htmlBody = EmailTemplates.ReservationConfirmation.GetHtmlBody(
+                customerName, tableNumber, reservationDate, startTime, endTime, numberOfGuests, specialRequests);
+            var textBody = EmailTemplates.ReservationConfirmation.GetTextBody(
+                customerName, tableNumber, reservationDate, startTime, endTime, numberOfGuests, specialRequests);
+
+            await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Reservation confirmation email sent to {Email} for table {TableNumber} on {Date}",
+                customerEmail, tableNumber, reservationDate);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send reservation confirmation email to {Email}", customerEmail);
+            throw;
+        }
+    }
+
+    public async Task SendReservationApprovedEmailAsync(string customerEmail, string customerName, string tableNumber,
+        DateTime reservationDate, TimeSpan startTime, TimeSpan endTime, int numberOfGuests,
+        string? specialRequests = null, string? notes = null)
+    {
+        try
+        {
+            var subject = EmailTemplates.ReservationApproved.Subject;
+            var htmlBody = EmailTemplates.ReservationApproved.GetHtmlBody(
+                customerName, tableNumber, reservationDate, startTime, endTime, numberOfGuests, specialRequests, notes);
+            var textBody = EmailTemplates.ReservationApproved.GetTextBody(
+                customerName, tableNumber, reservationDate, startTime, endTime, numberOfGuests, specialRequests, notes);
+
+            await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Reservation approved email sent to {Email} for table {TableNumber} on {Date}",
+                customerEmail, tableNumber, reservationDate);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send reservation approved email to {Email}", customerEmail);
+            throw;
+        }
+    }
+
     private SmtpClient CreateSmtpClient()
     {
         var client = new SmtpClient(_emailSettings.SmtpHost, _emailSettings.SmtpPort)

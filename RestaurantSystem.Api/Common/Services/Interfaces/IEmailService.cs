@@ -58,4 +58,36 @@ public interface IEmailService
     /// <param name="textBody">Plain text body content (optional)</param>
     /// <returns>Task representing the async operation</returns>
     Task SendBulkEmailAsync(IEnumerable<string> recipients, string subject, string htmlBody, string? textBody = null);
+
+    /// <summary>
+    /// Sends reservation confirmation email (when reservation is created)
+    /// </summary>
+    /// <param name="customerEmail">Customer email address</param>
+    /// <param name="customerName">Customer name</param>
+    /// <param name="tableNumber">Table number</param>
+    /// <param name="reservationDate">Reservation date</param>
+    /// <param name="startTime">Start time</param>
+    /// <param name="endTime">End time</param>
+    /// <param name="numberOfGuests">Number of guests</param>
+    /// <param name="specialRequests">Special requests</param>
+    /// <returns>Task representing the async operation</returns>
+    Task SendReservationConfirmationEmailAsync(string customerEmail, string customerName, string tableNumber,
+        DateTime reservationDate, TimeSpan startTime, TimeSpan endTime, int numberOfGuests, string? specialRequests = null);
+
+    /// <summary>
+    /// Sends reservation approved email (when admin approves the reservation)
+    /// </summary>
+    /// <param name="customerEmail">Customer email address</param>
+    /// <param name="customerName">Customer name</param>
+    /// <param name="tableNumber">Table number</param>
+    /// <param name="reservationDate">Reservation date</param>
+    /// <param name="startTime">Start time</param>
+    /// <param name="endTime">End time</param>
+    /// <param name="numberOfGuests">Number of guests</param>
+    /// <param name="specialRequests">Special requests</param>
+    /// <param name="notes">Notes from restaurant</param>
+    /// <returns>Task representing the async operation</returns>
+    Task SendReservationApprovedEmailAsync(string customerEmail, string customerName, string tableNumber,
+        DateTime reservationDate, TimeSpan startTime, TimeSpan endTime, int numberOfGuests,
+        string? specialRequests = null, string? notes = null);
 }
