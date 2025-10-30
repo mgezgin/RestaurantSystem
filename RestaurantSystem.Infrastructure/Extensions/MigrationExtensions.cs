@@ -29,11 +29,6 @@ namespace RestaurantSystem.Infrastructure.Extensions
                 logger.LogInformation("Seeding fidelity points data");
                 await FidelityPointsSeeder.SeedAsync(dbContext);
                 logger.LogInformation("Fidelity points data seeded successfully");
-
-                // Seed admin user role
-                logger.LogInformation("Seeding admin user role");
-                await AdminUserSeeder.SeedAsync(dbContext, userManager, roleManager);
-                logger.LogInformation("Admin user role seeded successfully");
             }
             catch (Exception ex)
             {
