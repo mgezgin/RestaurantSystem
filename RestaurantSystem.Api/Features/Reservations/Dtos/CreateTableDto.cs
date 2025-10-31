@@ -30,4 +30,7 @@ public record CreateTableDto
 
     [MaxLength(20)]
     public string Shape { get; set; } = "circle";
+
+    [MaxLength(500)]
+    public string? Notes { get; set; }
 }
