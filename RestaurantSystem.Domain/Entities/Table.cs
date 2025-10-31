@@ -15,6 +15,12 @@ public class Table : Entity
     public decimal Width { get; set; } = 80; // Default width
     public decimal Height { get; set; } = 80; // Default height
 
+    // Shape for visual rendering: circle, square, rectangle
+    public string Shape { get; set; } = "circle";
+
+    // Admin notes/comments for this table (visible to customers)
+    public string? Notes { get; set; }
+
     // Navigation property
     public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
 }

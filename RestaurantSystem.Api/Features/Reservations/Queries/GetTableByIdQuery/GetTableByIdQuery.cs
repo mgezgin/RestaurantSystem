@@ -35,7 +35,8 @@ public class GetTableByIdQueryHandler : IQueryHandler<GetTableByIdQuery, ApiResp
                     PositionX = t.PositionX,
                     PositionY = t.PositionY,
                     Width = t.Width,
-                    Height = t.Height
+                    Height = t.Height,
+                    Shape = t.Shape
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 

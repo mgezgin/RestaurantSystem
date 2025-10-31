@@ -27,4 +27,7 @@ public record CreateTableDto
 
     [Range(10, 500)]
     public decimal Height { get; set; } = 80;
+
+    [MaxLength(20)]
+    public string Shape { get; set; } = "circle";
 }

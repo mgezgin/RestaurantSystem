@@ -27,4 +27,10 @@ public record UpdateTableDto
 
     [Range(10, 500)]
     public decimal Height { get; set; }
+
+    [MaxLength(20)]
+    public string Shape { get; set; } = "circle";
+
+    [MaxLength(500)]
+    public string? Notes { get; set; }
 }

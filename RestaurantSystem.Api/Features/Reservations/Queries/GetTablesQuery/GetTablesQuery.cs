@@ -50,7 +50,8 @@ public class GetTablesQueryHandler : IQueryHandler<GetTablesQuery, ApiResponse<L
                     PositionX = t.PositionX,
                     PositionY = t.PositionY,
                     Width = t.Width,
-                    Height = t.Height
+                    Height = t.Height,
+                    Shape = t.Shape
                 })
                 .ToListAsync(cancellationToken);
 

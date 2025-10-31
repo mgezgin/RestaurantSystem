@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Reservations.Commands.CancelReservationCommand;
+using RestaurantSystem.Api.Features.Reservations.Commands.ConfirmReservationCommand;
 using RestaurantSystem.Api.Features.Reservations.Commands.CreateReservationCommand;
 using RestaurantSystem.Api.Features.Reservations.Commands.UpdateReservationCommand;
 using RestaurantSystem.Api.Features.Reservations.Dtos;
@@ -135,6 +136,24 @@ public class ReservationsController : ControllerBase
         // TODO: Add authorization check - users can only cancel their own reservations (except admins)
 
         var command = new CancelReservationCommand(id);
+        var result = await _mediator.SendCommand(command);
+
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Confirm a reservation (Admin only)
+    /// </summary>
+    [HttpPost("{id}/confirm")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<bool>>> ConfirmReservation(Guid id)
+    {
+        var command = new ConfirmReservationCommand(id);
         var result = await _mediator.SendCommand(command);
 
         if (!result.Success)

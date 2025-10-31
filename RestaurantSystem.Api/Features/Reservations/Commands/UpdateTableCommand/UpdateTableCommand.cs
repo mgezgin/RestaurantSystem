@@ -50,6 +50,7 @@ public class UpdateTableCommandHandler : ICommandHandler<UpdateTableCommand, Api
             table.PositionY = command.TableData.PositionY;
             table.Width = command.TableData.Width;
             table.Height = command.TableData.Height;
+            table.Shape = command.TableData.Shape;
 
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -63,7 +64,8 @@ public class UpdateTableCommandHandler : ICommandHandler<UpdateTableCommand, Api
                 PositionX = table.PositionX,
                 PositionY = table.PositionY,
                 Width = table.Width,
-                Height = table.Height
+                Height = table.Height,
+                Shape = table.Shape
             };
 
             _logger.LogInformation("Updated table {TableId}", command.TableId);

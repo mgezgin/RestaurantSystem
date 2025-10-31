@@ -11,4 +11,6 @@ public record TableDto
     public decimal PositionY { get; set; }
     public decimal Width { get; set; }
     public decimal Height { get; set; }
+    public string Shape { get; set; } = "circle";
+    public string? Notes { get; set; }
 }
