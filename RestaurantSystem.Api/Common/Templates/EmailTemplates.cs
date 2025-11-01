@@ -370,7 +370,7 @@ This is an automated message, please do not reply to this email.
 
             <div class='info-box'>
                 <strong>📅 Date:</strong> {reservationDate:dddd, MMMM dd, yyyy}<br>
-                <strong>🕐 Time:</strong> {startTime:hh\\:mm} - {endTime:hh\\:mm}<br>
+                <strong>🕐 Time:</strong> {startTime:hh':'mm} - {endTime:hh':'mm}<br>
                 <strong>👥 Guests:</strong> {numberOfGuests}<br>
                 <strong>🪑 Table:</strong> {tableNumber}
             </div>
@@ -412,7 +412,7 @@ Dear {customerName},
 Thank you for your reservation request at Rumi Restaurant. We have received your booking details:
 
 Date: {reservationDate:dddd, MMMM dd, yyyy}
-Time: {startTime:hh\\:mm} - {endTime:hh\\:mm}
+Time: {startTime:hh':'mm} - {endTime:hh':'mm}
 Guests: {numberOfGuests}
 Table: {tableNumber}{requestsSection}
 
@@ -487,7 +487,7 @@ Rumi Restaurant | Geneva | rumigeneve@gmail.com
 
             <div class='info-box'>
                 <strong>📅 Date:</strong> {reservationDate:dddd, MMMM dd, yyyy}<br>
-                <strong>🕐 Time:</strong> {startTime:hh\\:mm} - {endTime:hh\\:mm}<br>
+                <strong>🕐 Time:</strong> {startTime:hh':'mm} - {endTime:hh':'mm}<br>
                 <strong>👥 Guests:</strong> {numberOfGuests}<br>
                 <strong>🪑 Table:</strong> {tableNumber}
             </div>
@@ -540,7 +540,7 @@ Dear {customerName},
 Great news! Your reservation at Rumi Restaurant has been confirmed.
 
 Date: {reservationDate:dddd, MMMM dd, yyyy}
-Time: {startTime:hh\\:mm} - {endTime:hh\\:mm}
+Time: {startTime:hh':'mm} - {endTime:hh':'mm}
 Guests: {numberOfGuests}
 Table: {tableNumber}{requestsSection}{notesSection}
 
