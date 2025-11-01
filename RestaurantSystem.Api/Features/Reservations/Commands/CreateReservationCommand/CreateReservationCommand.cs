@@ -111,7 +111,7 @@ Customer: {reservation.CustomerName}
 Email: {reservation.CustomerEmail}
 Phone: {reservation.CustomerPhone}
 Date: {reservation.ReservationDate:dddd, MMMM dd, yyyy}
-Time: {reservation.StartTime:hh\\:mm} - {reservation.EndTime:hh\\:mm}
+Time: {reservation.StartTime:hh\:mm} - {reservation.EndTime:hh\:mm}
 Guests: {reservation.NumberOfGuests}
 Table: {table.TableNumber}
 Special Requests: {reservation.SpecialRequests ?? "None"}
