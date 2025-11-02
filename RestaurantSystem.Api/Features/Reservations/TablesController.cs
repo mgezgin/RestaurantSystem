@@ -4,10 +4,12 @@ using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Reservations.Commands.CreateTableCommand;
 using RestaurantSystem.Api.Features.Reservations.Commands.DeleteTableCommand;
+using RestaurantSystem.Api.Features.Reservations.Commands.GenerateTableQRCodeCommand;
 using RestaurantSystem.Api.Features.Reservations.Commands.UpdateTableCommand;
 using RestaurantSystem.Api.Features.Reservations.Dtos;
 using RestaurantSystem.Api.Features.Reservations.Queries.GetTableByIdQuery;
 using RestaurantSystem.Api.Features.Reservations.Queries.GetTablesQuery;
+using RestaurantSystem.Api.Features.Reservations.Queries.ValidateTableQRCodeQuery;
 
 namespace RestaurantSystem.Api.Features.Reservations;
 
@@ -105,6 +107,42 @@ public class TablesController : ControllerBase
         if (!result.Success)
         {
             return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Generate QR code for a table (Admin only)
+    /// </summary>
+    [HttpPost("{id}/generate-qr")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<TableQRCodeDto>>> GenerateTableQRCode(Guid id)
+    {
+        var command = new GenerateTableQRCodeCommand(id);
+        var result = await _mediator.SendCommand(command);
+
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Validate a QR code and get table information
+    /// </summary>
+    [HttpGet("validate-qr/{qrCodeData}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<TableValidationDto>>> ValidateTableQRCode(string qrCodeData)
+    {
+        var query = new ValidateTableQRCodeQuery(qrCodeData);
+        var result = await _mediator.SendQuery(query);
+
+        if (!result.Success)
+        {
+            return NotFound(result);
         }
 
         return Ok(result);

@@ -36,7 +36,10 @@ public class GetTableByIdQueryHandler : IQueryHandler<GetTableByIdQuery, ApiResp
                     PositionY = t.PositionY,
                     Width = t.Width,
                     Height = t.Height,
-                    Shape = t.Shape
+                    Shape = t.Shape,
+                    Notes = t.Notes,
+                    QRCodeData = t.QRCodeData,
+                    QRCodeGeneratedAt = t.QRCodeGeneratedAt
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 

@@ -61,7 +61,11 @@ public class CreateTableCommandHandler : ICommandHandler<CreateTableCommand, Api
                 PositionX = table.PositionX,
                 PositionY = table.PositionY,
                 Width = table.Width,
-                Height = table.Height
+                Height = table.Height,
+                Shape = table.Shape,
+                Notes = table.Notes,
+                QRCodeData = table.QRCodeData,
+                QRCodeGeneratedAt = table.QRCodeGeneratedAt
             };
 
             _logger.LogInformation("Created table {TableNumber} with ID {TableId}", table.TableNumber, table.Id);

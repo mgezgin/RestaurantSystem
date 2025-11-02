@@ -52,7 +52,9 @@ public class GetTablesQueryHandler : IQueryHandler<GetTablesQuery, ApiResponse<L
                     Width = t.Width,
                     Height = t.Height,
                     Shape = t.Shape,
-                    Notes = t.Notes
+                    Notes = t.Notes,
+                    QRCodeData = t.QRCodeData,
+                    QRCodeGeneratedAt = t.QRCodeGeneratedAt
                 })
                 .ToListAsync(cancellationToken);
 

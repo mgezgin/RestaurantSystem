@@ -13,6 +13,7 @@ using RestaurantSystem.Api.Features.User.Commands.UpdateUserProfileCommand;
 using RestaurantSystem.Api.Features.User.Dtos;
 using RestaurantSystem.Api.Features.User.Queries.GetCurrentUserQuery;
 using RestaurantSystem.Api.Features.User.Queries.GetUsersQuery;
+using RestaurantSystem.Api.Features.User.Queries.GetUserStatisticsQuery;
 
 namespace RestaurantSystem.Api.Features.User;
 [Route("api/[controller]")]
@@ -102,6 +103,18 @@ public class UserController : ControllerBase
     public async Task<ActionResult<ApiResponse<UserDto>>> UpdateUserDiscountSettings([FromBody] UpdateUserDiscountsCommand command)
     {
         var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get user statistics (admin only)
+    /// </summary>
+    [HttpGet("statistics")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<UserStatisticsDto>>> GetUserStatistics()
+    {
+        var query = new GetUserStatisticsQuery();
+        var result = await _mediator.SendQuery(query);
         return Ok(result);
     }
 

@@ -21,6 +21,10 @@ public class Table : Entity
     // Admin notes/comments for this table (visible to customers)
     public string? Notes { get; set; }
 
+    // QR Code data for table ordering
+    public string? QRCodeData { get; set; }
+    public DateTime? QRCodeGeneratedAt { get; set; }
+
     // Navigation property
     public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
 }

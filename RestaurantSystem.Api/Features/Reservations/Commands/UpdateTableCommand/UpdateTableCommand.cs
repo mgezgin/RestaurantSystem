@@ -67,7 +67,9 @@ public class UpdateTableCommandHandler : ICommandHandler<UpdateTableCommand, Api
                 Width = table.Width,
                 Height = table.Height,
                 Shape = table.Shape,
-                Notes = table.Notes
+                Notes = table.Notes,
+                QRCodeData = table.QRCodeData,
+                QRCodeGeneratedAt = table.QRCodeGeneratedAt
             };
 
             _logger.LogInformation("Updated table {TableId}", command.TableId);

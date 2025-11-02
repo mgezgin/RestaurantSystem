@@ -13,4 +13,6 @@ public record TableDto
     public decimal Height { get; set; }
     public string Shape { get; set; } = "circle";
     public string? Notes { get; set; }
+    public string? QRCodeData { get; set; }
+    public DateTime? QRCodeGeneratedAt { get; set; }
 }
