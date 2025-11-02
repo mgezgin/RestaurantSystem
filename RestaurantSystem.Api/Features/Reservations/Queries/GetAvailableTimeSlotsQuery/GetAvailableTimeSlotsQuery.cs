@@ -82,7 +82,9 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
                     PositionX = t.PositionX,
                     PositionY = t.PositionY,
                     Width = t.Width,
-                    Height = t.Height
+                    Height = t.Height,
+                    Shape = t.Shape,
+                    Notes = t.Notes
                 })
                 .ToList();
 

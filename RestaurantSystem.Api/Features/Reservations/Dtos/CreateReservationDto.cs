@@ -13,10 +13,8 @@ public record CreateReservationDto
     [MaxLength(255)]
     public string CustomerEmail { get; set; } = string.Empty;
 
-    [Required]
-    [Phone]
     [MaxLength(20)]
-    public string CustomerPhone { get; set; } = string.Empty;
+    public string? CustomerPhone { get; set; }
 
     [Required]
     public Guid TableId { get; set; }

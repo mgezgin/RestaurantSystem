@@ -8,7 +8,7 @@ public class Reservation : Entity
     public Guid? CustomerId { get; set; } // Nullable for guest reservations
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
-    public string CustomerPhone { get; set; } = string.Empty;
+    public string? CustomerPhone { get; set; }
 
     public Guid TableId { get; set; }
     public virtual Table Table { get; set; } = null!;
