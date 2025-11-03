@@ -49,8 +49,10 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
             }
 
             // Get all confirmed/pending reservations for the requested date
+            // Ensure DateTime has UTC kind for PostgreSQL compatibility
+            var queryDateUtc = DateTime.SpecifyKind(query.Date.Date, DateTimeKind.Utc);
             var existingReservations = await _context.Reservations
-                .Where(r => r.ReservationDate.Date == query.Date.Date &&
+                .Where(r => r.ReservationDate.Date == queryDateUtc &&
                            (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed))
                 .ToListAsync(cancellationToken);
 
@@ -115,7 +117,7 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting available time slots for date {Date}", query.Date);
+            _logger.LogError(ex, "Error getting available time slots for date {Date}, NumberOfGuests {NumberOfGuests}. Exception: {ExceptionMessage}", query.Date, query.NumberOfGuests, ex.Message);
             return ApiResponse<AvailableTimeSlotsDto>.Failure("Failed to retrieve available time slots");
         }
     }
