@@ -38,14 +38,15 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
                 return ApiResponse<AvailableTimeSlotsDto>.Failure("Cannot make reservations for past dates");
             }
 
-            // Get all active tables that can accommodate the number of guests
-            var tables = await _context.Tables
-                .Where(t => t.IsActive && t.MaxGuests >= query.NumberOfGuests)
+            // Get ALL active tables (not filtered by capacity)
+            // This allows the frontend to make intelligent decisions about availability
+            var allTables = await _context.Tables
+                .Where(t => t.IsActive)
                 .ToListAsync(cancellationToken);
 
-            if (!tables.Any())
+            if (!allTables.Any())
             {
-                return ApiResponse<AvailableTimeSlotsDto>.Failure($"No tables available for {query.NumberOfGuests} guests");
+                return ApiResponse<AvailableTimeSlotsDto>.Failure("No active tables found");
             }
 
             // Get all confirmed/pending reservations for the requested date
@@ -64,8 +65,8 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
             {
                 var slotEndTime = currentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes));
 
-                // Find available tables for this time slot
-                var availableTables = tables.Where(table =>
+                // Find available tables for this time slot (ALL tables, regardless of capacity)
+                var availableTables = allTables.Where(table =>
                 {
                     // Check if this table has any conflicting reservations
                     var hasConflict = existingReservations.Any(r =>
