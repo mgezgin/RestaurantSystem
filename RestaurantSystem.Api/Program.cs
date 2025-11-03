@@ -281,11 +281,9 @@ app.MapGet("/api/health", () => Results.Ok(new
 
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
-{
-    await app.Services.EnsureDatabaseCreatedAsync();
-    await app.Services.MigrateApplicationDatabaseAsync();
-}
+// Run migrations in all environments
+await app.Services.EnsureDatabaseCreatedAsync();
+await app.Services.MigrateApplicationDatabaseAsync();
 
 app.Run();
 
