@@ -2,9 +2,11 @@
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.Api.Common.Utilities;
 using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Services;
+using RestaurantSystem.Api.Features.Settings.Interfaces;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -20,6 +22,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
     private readonly IOrderMappingService _mappingService;
     private readonly IFidelityPointsService _fidelityPointsService;
     private readonly ICustomerDiscountService _customerDiscountService;
+    private readonly ITaxConfigurationService _taxConfigurationService;
 
     public CreateOrderCommandHandler(
         ApplicationDbContext context,
@@ -28,6 +31,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         IOrderMappingService mappingService,
         IFidelityPointsService fidelityPointsService,
         ICustomerDiscountService customerDiscountService,
+        ITaxConfigurationService taxConfigurationService,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _context = context;
@@ -36,6 +40,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         _mappingService = mappingService;
         _fidelityPointsService = fidelityPointsService;
         _customerDiscountService = customerDiscountService;
+        _taxConfigurationService = taxConfigurationService;
         _logger = logger;
     }
 
@@ -181,7 +186,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
 
             // Calculate order totals
             order.SubTotal = subTotal;
-            order.Tax = CalculateTax(subTotal);
+            order.Tax = await CalculateTax(subTotal);
             order.DeliveryFee = command.Type == OrderType.Delivery ? CalculateDeliveryFee() : 0;
 
             // Apply user discount
@@ -233,7 +238,10 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 _logger.LogInformation("Order will earn {Points} fidelity points", pointsToEarn);
             }
 
-            order.Total = totalBeforeFidelity - order.FidelityPointsDiscount;
+            // Calculate total and apply special rounding for discounted customers
+            var calculatedTotal = totalBeforeFidelity - order.FidelityPointsDiscount;
+            bool hasActiveDiscount = PriceRoundingUtility.HasActiveDiscount(order.CustomerDiscountAmount + order.Discount);
+            order.Total = PriceRoundingUtility.ApplySpecialRounding(calculatedTotal, hasActiveDiscount);
 
             // Process payments
             decimal totalPaid = 0;
@@ -371,10 +379,9 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         return $"{date}{sequence:D4}";
     }
 
-    private decimal CalculateTax(decimal subTotal)
+    private async Task<decimal> CalculateTax(decimal subTotal)
     {
-        const decimal taxRate = 0.18m; // 18% tax rate
-        return Math.Round(subTotal * taxRate, 2);
+        return await _taxConfigurationService.CalculateTaxAsync(subTotal);
     }
 
     private decimal CalculateDeliveryFee()

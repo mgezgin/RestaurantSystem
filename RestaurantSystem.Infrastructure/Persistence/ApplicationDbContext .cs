@@ -53,6 +53,9 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<Table> Tables { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
 
+        // Tax Configuration
+        public DbSet<TaxConfiguration> TaxConfigurations { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

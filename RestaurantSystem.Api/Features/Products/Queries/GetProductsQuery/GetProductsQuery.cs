@@ -143,6 +143,19 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                     .Select(pc => pc.Category.Name)
                     .FirstOrDefault(),
                 VariationCount = p.Variations.Count,
+                Variations = p.Variations
+                    .Where(v => v.IsActive)
+                    .OrderBy(v => v.DisplayOrder)
+                    .Select(v => new ProductVariationDto
+                    {
+                        Id = v.Id,
+                        Name = v.Name,
+                        Description = v.Description,
+                        PriceModifier = v.PriceModifier,
+                        IsActive = v.IsActive,
+                        DisplayOrder = v.DisplayOrder
+                    })
+                    .ToList(),
                 SuggestedSideItems = p.SuggestedSideItems
                     .Where(si => si.SideItemProduct != null)
                     .OrderBy(si => si.DisplayOrder)

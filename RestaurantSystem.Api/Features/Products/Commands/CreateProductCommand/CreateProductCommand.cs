@@ -198,11 +198,17 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                     _context.ProductIngredients.Add(ingredient);
                     product.DetailedIngredients.Add(ingredient);
 
-                    // Add ingredient descriptions
+                    // Add ingredient descriptions (only non-empty ones)
                     if (ingredientDto.Content != null)
                     {
                         foreach (var (languageCode, content) in ingredientDto.Content)
                         {
+                            // Skip empty content entries
+                            if (string.IsNullOrWhiteSpace(content.Name) && string.IsNullOrWhiteSpace(content.Description))
+                            {
+                                continue;
+                            }
+
                             var description = new ProductIngredientDescription
                             {
                                 ProductIngredient = ingredient,
@@ -243,7 +249,15 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            // Only rollback if the transaction is still active
+            try
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            catch (InvalidOperationException)
+            {
+                // Transaction already completed or disposed, ignore rollback error
+            }
             throw;
         }
     }
@@ -271,14 +285,17 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 Price = di.Price,
                 IsActive = di.IsActive,
                 DisplayOrder = di.DisplayOrder,
-                Content = di.Descriptions.ToDictionary(
-                    d => d.LanguageCode,
-                    d => new ProductIngredientContentDto
-                    {
-                        Name = d.Name,
-                        Description = d.Description
-                    }
-                )
+                Content = di.Descriptions
+                    .GroupBy(d => d.LanguageCode)
+                    .Select(g => g.First()) // Take first if duplicates exist
+                    .ToDictionary(
+                        d => d.LanguageCode,
+                        d => new ProductIngredientContentDto
+                        {
+                            Name = d.Name,
+                            Description = d.Description
+                        }
+                    )
             }).ToList(),
             Categories = product.ProductCategories.Select(pc => new ProductCategoryDto
             {

@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.Api.Common.Utilities;
 using RestaurantSystem.Api.Features.Basket.Dtos;
 using RestaurantSystem.Api.Features.Basket.Dtos.Requests;
 using RestaurantSystem.Api.Features.Basket.Interfaces;
 using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
+using RestaurantSystem.Api.Features.Settings.Interfaces;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 using System.Text.Json;
@@ -17,18 +19,19 @@ public class BasketService : IBasketService
     private readonly IDistributedCache _cache;
     private readonly ICurrentUserService _currentUserService;
     private readonly ICustomerDiscountService _customerDiscountService;
+    private readonly ITaxConfigurationService _taxConfigurationService;
     private readonly ILogger<BasketService> _logger;
     private readonly IConfiguration _configuration;
 
     private const string BASKET_CACHE_KEY_PREFIX = "basket:";
     private const int BASKET_CACHE_EXPIRY_MINUTES = 30;
-    private const decimal TAX_RATE = 0.08m; // 8% tax
 
     public BasketService(
        ApplicationDbContext context,
        IDistributedCache cache,
        ICurrentUserService currentUserService,
        ICustomerDiscountService customerDiscountService,
+       ITaxConfigurationService taxConfigurationService,
        ILogger<BasketService> logger,
        IConfiguration configuration)
     {
@@ -36,6 +39,7 @@ public class BasketService : IBasketService
         _cache = cache;
         _currentUserService = currentUserService;
         _customerDiscountService = customerDiscountService;
+        _taxConfigurationService = taxConfigurationService;
         _logger = logger;
         _configuration = configuration;
     }
@@ -274,9 +278,16 @@ public class BasketService : IBasketService
 
     public async Task<BasketDto> UpdateBasketItemAsync(string sessionId, Guid basketItemId, UpdateBasketItemDto update)
     {
+        // Get the user's basket first to ensure we're checking the right context
+        var userId = _currentUserService.UserId;
+        var basket = await GetBasketFromDatabase(sessionId, userId);
+        
+        if (basket == null)
+            throw new InvalidOperationException("Basket not found");
+
         var basketItem = await _context.BasketItems
             .Include(bi => bi.Basket)
-            .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.Basket.SessionId == sessionId);
+            .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.BasketId == basket.Id);
 
         if (basketItem == null)
             throw new InvalidOperationException("Basket item not found");
@@ -291,22 +302,28 @@ public class BasketService : IBasketService
         await RecalculateBasketTotalsAsync(basketItem.BasketId);
 
         // Invalidate cache
-        await InvalidateBasketCacheAsync(sessionId, basketItem.Basket.UserId);
+        await InvalidateBasketCacheAsync(sessionId, userId);
 
-        return await GetBasketAsync(sessionId, basketItem.Basket.UserId) ?? throw new InvalidOperationException("Failed to retrieve basket");
+        return await GetBasketAsync(sessionId, userId) ?? throw new InvalidOperationException("Failed to retrieve basket");
     }
 
     public async Task<BasketDto> RemoveItemFromBasketAsync(string sessionId, Guid basketItemId)
     {
+        // Get the user's basket first to ensure we're checking the right context
+        var userId = _currentUserService.UserId;
+        var basket = await GetBasketFromDatabase(sessionId, userId);
+        
+        if (basket == null)
+            throw new InvalidOperationException("Basket not found");
+
         var basketItem = await _context.BasketItems
             .Include(bi => bi.Basket)
-            .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.Basket.SessionId == sessionId);
+            .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.BasketId == basket.Id);
 
         if (basketItem == null)
             throw new InvalidOperationException("Basket item not found");
 
         var basketId = basketItem.BasketId;
-        var userId = basketItem.Basket.UserId;
 
         _context.BasketItems.Remove(basketItem);
 
@@ -480,10 +497,11 @@ public class BasketService : IBasketService
         }
 
         basket.SubTotal = subTotal;
-        basket.Tax = Math.Round(subTotal * TAX_RATE, 2);
 
         // Calculate customer discount if user is logged in
         decimal customerDiscountAmount = 0;
+        bool hasDiscount = false;
+        
         if (basket.UserId.HasValue && basket.UserId.Value != Guid.Empty)
         {
             var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
@@ -494,6 +512,8 @@ public class BasketService : IBasketService
             if (customerDiscount != null)
             {
                 customerDiscountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, subTotal);
+                hasDiscount = PriceRoundingUtility.HasActiveDiscount(customerDiscountAmount);
+                
                 _logger.LogInformation(
                     "Applied customer discount '{DiscountName}' (ID: {DiscountId}) to basket {BasketId}: {DiscountAmount:C}",
                     customerDiscount.Name,
@@ -504,11 +524,26 @@ public class BasketService : IBasketService
             }
         }
 
-        basket.Total = basket.SubTotal + basket.Tax + basket.DeliveryFee - basket.Discount - customerDiscountAmount;
+        // Store the customer discount in the basket
+        basket.CustomerDiscount = customerDiscountAmount;
+
+        // Calculate tax on the amount after customer discount
+        decimal amountAfterDiscount = basket.SubTotal - customerDiscountAmount - basket.Discount;
+        basket.Tax = await _taxConfigurationService.CalculateTaxAsync(amountAfterDiscount);
+
+        // Calculate total before rounding
+        decimal calculatedTotal = amountAfterDiscount + basket.Tax + basket.DeliveryFee;
+        
+        // Apply special rounding for discounted customers
+        basket.Total = PriceRoundingUtility.ApplySpecialRounding(calculatedTotal, hasDiscount);
+        
         basket.UpdatedAt = DateTime.UtcNow;
         basket.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
 
         await _context.SaveChangesAsync();
+        
+        // Invalidate cache after recalculating totals
+        await InvalidateBasketCacheAsync(basket.SessionId, basket.UserId);
     }
 
     private async Task<Domain.Entities.Basket> GetOrCreateBasketAsync(string? sessionId, Guid? userId)

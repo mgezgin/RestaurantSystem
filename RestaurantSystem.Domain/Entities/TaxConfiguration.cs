@@ -1,0 +1,11 @@
+using RestaurantSystem.Domain.Common.Base;
+
+namespace RestaurantSystem.Domain.Entities;
+
+public class TaxConfiguration : Entity
+{
+    public string Name { get; set; } = string.Empty; // e.g., "VAT", "Sales Tax"
+    public decimal Rate { get; set; } // e.g., 0.08 for 8%
+    public bool IsEnabled { get; set; }
+    public string Description { get; set; } = string.Empty;
+}
