@@ -42,9 +42,10 @@ public class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategoryComman
             return ApiResponse<CategoryDto>.Failure("Category not found");
         }
 
-        // Check if another category with the same name exists
+        // Check if another category with the same name exists (case-insensitive)
         var duplicateCategory = await _context.Categories
-            .FirstOrDefaultAsync(c => c.Name == command.Name && c.Id != command.Id && !c.IsDeleted, cancellationToken);
+            .Where(c => !c.IsDeleted && c.Id != command.Id)
+            .FirstOrDefaultAsync(c => EF.Functions.ILike(c.Name, command.Name), cancellationToken);
 
         if (duplicateCategory != null)
         {

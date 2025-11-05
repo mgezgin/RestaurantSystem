@@ -34,16 +34,19 @@ public class CreateCategoryCommandHandler : ICommandHandler<CreateCategoryComman
 
     public async Task<ApiResponse<CategoryDto>> Handle(CreateCategoryCommand command, CancellationToken cancellationToken)
     {
-        // Check if category with same name exists
+        // Check if category with same name exists (case-insensitive)
         var existingCategory = await _context.Categories
-            .FirstOrDefaultAsync(c => c.Name == command.Name && !c.IsDeleted, cancellationToken);
+            .Where(c => !c.IsDeleted)
+            .FirstOrDefaultAsync(c => EF.Functions.ILike(c.Name, command.Name), cancellationToken);
 
         if (existingCategory != null)
         {
             return ApiResponse<CategoryDto>.Failure("Category with this name already exists");
         }
 
-        var max = await _context.Categories.MaxAsync(c => (int?)c.DisplayOrder) ?? 0;
+        var max = await _context.Categories
+            .Where(c => !c.IsDeleted)
+            .MaxAsync(c => (int?)c.DisplayOrder, cancellationToken) ?? 0;
 
         var category = new Category
         {

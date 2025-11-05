@@ -15,4 +15,7 @@ public record FeaturedSpecialDto
     public List<string>? Ingredients { get; init; }
     public List<string>? Allergens { get; init; }
     public List<ProductImageDto>? Images { get; init; }
+    public List<ProductVariationDto> Variations { get; init; } = [];
+    public List<SideItemDto> SuggestedSideItems { get; init; } = [];
+    public List<ProductIngredientDto> DetailedIngredients { get; init; } = [];
 }

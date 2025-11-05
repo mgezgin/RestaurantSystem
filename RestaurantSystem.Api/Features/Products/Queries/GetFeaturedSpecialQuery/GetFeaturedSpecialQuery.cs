@@ -36,6 +36,12 @@ public class GetFeaturedSpecialQueryHandler : IQueryHandler<GetFeaturedSpecialQu
         // Get the product where IsFeaturedSpecial = true
         var featuredProduct = await _context.Products
             .Include(p => p.Images)
+            .Include(p => p.Variations)
+            .Include(p => p.SuggestedSideItems)
+                .ThenInclude(si => si.SideItemProduct)
+                .ThenInclude(s => s.Images)
+            .Include(p => p.DetailedIngredients)
+                .ThenInclude(di => di.Descriptions)
             .Where(p => p.IsFeaturedSpecial && p.IsSpecial && p.IsActive)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -67,7 +73,64 @@ public class GetFeaturedSpecialQueryHandler : IQueryHandler<GetFeaturedSpecialQu
                 IsPrimary = img.IsPrimary,
                 SortOrder = img.SortOrder,
                 AltText = img.AltText
-            }).ToList()
+            }).ToList(),
+            Variations = featuredProduct.Variations
+                .OrderBy(v => v.DisplayOrder)
+                .Select(v => new ProductVariationDto
+                {
+                    Id = v.Id,
+                    Name = v.Name,
+                    Description = v.Description,
+                    PriceModifier = v.PriceModifier,
+                    FinalPrice = featuredProduct.BasePrice + v.PriceModifier,
+                    IsActive = v.IsActive,
+                    DisplayOrder = v.DisplayOrder
+                }).ToList(),
+            SuggestedSideItems = featuredProduct.SuggestedSideItems
+                .Where(si => si.SideItemProduct.IsActive)
+                .OrderBy(si => si.DisplayOrder)
+                .Select(si => new SideItemDto
+                {
+                    Id = si.SideItemProduct.Id,
+                    Name = si.SideItemProduct.Name,
+                    Description = si.SideItemProduct.Description,
+                    Price = si.SideItemProduct.BasePrice,
+                    ImageUrl = si.SideItemProduct.Images
+                        .Where(img => img.IsPrimary)
+                        .Select(img => _baseUrl + "/" + img.Url)
+                        .FirstOrDefault() ?? si.SideItemProduct.ImageUrl,
+                    IsRequired = si.IsRequired,
+                    DisplayOrder = si.DisplayOrder,
+                    Images = si.SideItemProduct.Images.Select(img => new ProductImageDto
+                    {
+                        Id = img.Id,
+                        Url = _baseUrl + "/" + img.Url,
+                        IsPrimary = img.IsPrimary,
+                        SortOrder = img.SortOrder,
+                        AltText = img.AltText
+                    }).ToList()
+                }).ToList(),
+            DetailedIngredients = featuredProduct.DetailedIngredients
+                .Where(di => di.IsActive)
+                .OrderBy(di => di.DisplayOrder)
+                .Select(di => new ProductIngredientDto
+                {
+                    Id = di.Id,
+                    Name = di.Name,
+                    IsOptional = di.IsOptional,
+                    Price = di.Price,
+                    IsActive = di.IsActive,
+                    DisplayOrder = di.DisplayOrder,
+                    Content = di.Descriptions
+                        .GroupBy(d => d.LanguageCode)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => new ProductIngredientContentDto
+                            {
+                                Name = g.First().Name,
+                                Description = g.First().Description
+                            })
+                }).ToList()
         };
 
         _logger.LogInformation(

@@ -154,18 +154,18 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         if (command.Variations != null)
         {
             _context.ProductVariations.RemoveRange(product.Variations);
-            // Add new variations
-            var newVariations = command.Variations.Where(v => v.Id == null || v.Id == Guid.Empty);
-            foreach (var newVariation in newVariations)
+            
+            // Add all variations (both new and existing)
+            foreach (var variationDto in command.Variations)
             {
                 var variation = new ProductVariation
                 {
                     ProductId = product.Id,
-                    Name = newVariation.Name,
-                    Description = newVariation.Description,
-                    PriceModifier = newVariation.PriceModifier,
-                    IsActive = newVariation.IsActive,
-                    DisplayOrder = newVariation.DisplayOrder,
+                    Name = variationDto.Name,
+                    Description = variationDto.Description,
+                    PriceModifier = variationDto.PriceModifier,
+                    IsActive = variationDto.IsActive,
+                    DisplayOrder = variationDto.DisplayOrder,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
