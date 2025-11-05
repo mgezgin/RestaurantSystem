@@ -3,6 +3,7 @@ using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Products.Commands.DeleteProductImageCommand;
+using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 
 namespace RestaurantSystem.Api.Features.User.Commands.DeleteUserCommand;
@@ -38,15 +39,29 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand, ApiRe
             return ApiResponse<string>.Failure("User not found");
         }
 
-        // Soft delete the User
-        user.IsDeleted = true;
-        user.DeletedAt = DateTime.UtcNow;
-        user.DeletedBy = _currentUserService.UserId?.ToString() ?? "System";
+        // Hard delete staff members (Server, Cashier, KitchenStaff, Admin)
+        // Soft delete customers for data retention
+        if (user.Role == UserRole.Server || user.Role == UserRole.Cashier || 
+            user.Role == UserRole.KitchenStaff || user.Role == UserRole.Admin)
+        {
+            // Hard delete - permanently remove from database
+            _context.Users.Remove(user);
+            
+            _logger.LogInformation("Staff user {UserId} ({Role}) permanently deleted by user {DeletedBy}",
+                command.UserId, user.Role, _currentUserService.UserId);
+        }
+        else
+        {
+            // Soft delete for customers
+            user.IsDeleted = true;
+            user.DeletedAt = DateTime.UtcNow;
+            user.DeletedBy = _currentUserService.UserId?.ToString() ?? "System";
+            
+            _logger.LogInformation("Customer {UserId} soft deleted by user {DeletedBy}",
+                command.UserId, _currentUserService.UserId);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("User {UserId} deleted by user {UserId}",
-            command.UserId, _currentUserService.UserId);
 
         return ApiResponse<string>.SuccessWithData("User deleted successfully");
     }
