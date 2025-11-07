@@ -18,6 +18,9 @@ public class Table : Entity
     // Shape for visual rendering: circle, square, rectangle
     public string Shape { get; set; } = "circle";
 
+    // Rotation angle in degrees (0-360)
+    public int Rotation { get; set; } = 0;
+
     // Admin notes/comments for this table (visible to customers)
     public string? Notes { get; set; }
 

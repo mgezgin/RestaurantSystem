@@ -51,6 +51,7 @@ public class UpdateTableCommandHandler : ICommandHandler<UpdateTableCommand, Api
             table.Width = command.TableData.Width;
             table.Height = command.TableData.Height;
             table.Shape = command.TableData.Shape;
+            table.Rotation = command.TableData.Rotation;
             table.Notes = command.TableData.Notes;
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -67,6 +68,7 @@ public class UpdateTableCommandHandler : ICommandHandler<UpdateTableCommand, Api
                 Width = table.Width,
                 Height = table.Height,
                 Shape = table.Shape,
+                Rotation = table.Rotation,
                 Notes = table.Notes,
                 QRCodeData = table.QRCodeData,
                 QRCodeGeneratedAt = table.QRCodeGeneratedAt

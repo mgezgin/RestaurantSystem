@@ -31,6 +31,9 @@ public record CreateTableDto
     [MaxLength(20)]
     public string Shape { get; set; } = "circle";
 
+    [Range(0, 360)]
+    public int Rotation { get; set; } = 0;
+
     [MaxLength(500)]
     public string? Notes { get; set; }
 }

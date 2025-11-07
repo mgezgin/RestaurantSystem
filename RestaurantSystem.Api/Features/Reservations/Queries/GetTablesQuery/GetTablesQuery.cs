@@ -52,6 +52,7 @@ public class GetTablesQueryHandler : IQueryHandler<GetTablesQuery, ApiResponse<L
                     Width = t.Width,
                     Height = t.Height,
                     Shape = t.Shape,
+                    Rotation = t.Rotation,
                     Notes = t.Notes,
                     QRCodeData = t.QRCodeData,
                     QRCodeGeneratedAt = t.QRCodeGeneratedAt

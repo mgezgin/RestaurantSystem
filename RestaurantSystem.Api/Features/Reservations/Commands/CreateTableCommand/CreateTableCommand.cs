@@ -45,6 +45,9 @@ public class CreateTableCommandHandler : ICommandHandler<CreateTableCommand, Api
                 PositionY = data.PositionY,
                 Width = data.Width,
                 Height = data.Height,
+                Shape = data.Shape,
+                Rotation = data.Rotation,
+                Notes = data.Notes,
                 CreatedBy = "System" // TODO: Get from current user
             };
 
@@ -63,6 +66,7 @@ public class CreateTableCommandHandler : ICommandHandler<CreateTableCommand, Api
                 Width = table.Width,
                 Height = table.Height,
                 Shape = table.Shape,
+                Rotation = table.Rotation,
                 Notes = table.Notes,
                 QRCodeData = table.QRCodeData,
                 QRCodeGeneratedAt = table.QRCodeGeneratedAt

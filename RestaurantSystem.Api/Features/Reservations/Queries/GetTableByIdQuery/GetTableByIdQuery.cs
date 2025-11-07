@@ -37,6 +37,7 @@ public class GetTableByIdQueryHandler : IQueryHandler<GetTableByIdQuery, ApiResp
                     Width = t.Width,
                     Height = t.Height,
                     Shape = t.Shape,
+                    Rotation = t.Rotation,
                     Notes = t.Notes,
                     QRCodeData = t.QRCodeData,
                     QRCodeGeneratedAt = t.QRCodeGeneratedAt
