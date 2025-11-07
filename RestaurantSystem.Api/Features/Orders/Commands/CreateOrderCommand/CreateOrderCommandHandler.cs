@@ -338,6 +338,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             // Map to DTO
             var orderDto = await _mappingService.MapToOrderDtoAsync(order, cancellationToken);
 
+            _logger.LogInformation("Sending kitchen notification for order {OrderNumber}", order.OrderNumber);
             await _orderEventService.NotifyOrderCreated(orderDto);
 
             if (order.IsFocusOrder)
