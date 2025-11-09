@@ -90,4 +90,39 @@ public interface IEmailService
     Task SendReservationApprovedEmailAsync(string customerEmail, string customerName, string tableNumber,
         DateTime reservationDate, TimeSpan startTime, TimeSpan endTime, int numberOfGuests,
         string? specialRequests = null, string? notes = null);
+
+    /// <summary>
+    /// Sends order confirmation email to customer
+    /// </summary>
+    /// <param name="customerEmail">Customer email address</param>
+    /// <param name="customerName">Customer name</param>
+    /// <param name="orderNumber">Order number</param>
+    /// <param name="orderType">Order type (DineIn, Takeaway, Delivery)</param>
+    /// <param name="total">Order total amount</param>
+    /// <param name="items">List of order items with name, quantity, and price</param>
+    /// <param name="specialInstructions">Special instructions</param>
+    /// <param name="deliveryAddress">Delivery address (if applicable)</param>
+    /// <returns>Task representing the async operation</returns>
+    Task SendOrderConfirmationEmailAsync(string customerEmail, string customerName, string orderNumber,
+        string orderType, decimal total, IEnumerable<(string name, int quantity, decimal price)> items,
+        string? specialInstructions = null, string? deliveryAddress = null);
+
+    /// <summary>
+    /// Sends order confirmation email to admin/restaurant
+    /// </summary>
+    /// <param name="adminEmail">Admin email address</param>
+    /// <param name="orderNumber">Order number</param>
+    /// <param name="customerName">Customer name</param>
+    /// <param name="customerEmail">Customer email</param>
+    /// <param name="customerPhone">Customer phone</param>
+    /// <param name="orderType">Order type (DineIn, Takeaway, Delivery)</param>
+    /// <param name="total">Order total amount</param>
+    /// <param name="items">List of order items with name, quantity, and price</param>
+    /// <param name="specialInstructions">Special instructions</param>
+    /// <param name="deliveryAddress">Delivery address (if applicable)</param>
+    /// <returns>Task representing the async operation</returns>
+    Task SendOrderConfirmationAdminEmailAsync(string adminEmail, string orderNumber, string customerName,
+        string customerEmail, string customerPhone, string orderType, decimal total,
+        IEnumerable<(string name, int quantity, decimal price)> items, string? specialInstructions = null,
+        string? deliveryAddress = null);
 }

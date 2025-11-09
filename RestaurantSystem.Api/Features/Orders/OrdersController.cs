@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common;
 using RestaurantSystem.Api.Common.Authorization;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Orders.Commands.AddPaymentToOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.CancelOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.CreateOrderCommand;
@@ -21,14 +22,20 @@ namespace RestaurantSystem.Api.Features.Orders;
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
 {
+    private const string AdminEmail = "rumigeneve@gmail.com";
+
     private readonly CustomMediator _mediator;
     private readonly IOrderEventService _orderEventService;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<OrdersController> _logger;
 
-    public OrdersController(CustomMediator mediator,IOrderEventService orderEventService)
+    public OrdersController(CustomMediator mediator, IOrderEventService orderEventService,
+        IEmailService emailService, ILogger<OrdersController> logger)
     {
         _mediator = mediator;
         _orderEventService = orderEventService;
-
+        _emailService = emailService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -71,7 +78,6 @@ public class OrdersController : ControllerBase
     /// Create a new order with multiple payment options
     /// </summary>
     [HttpPost]
-    [Authorize]
     public async Task<ActionResult<ApiResponse<OrderDto>>> CreateOrder([FromBody] CreateOrderCommand command)
     {
         var result = await _mediator.SendCommand(command);
@@ -160,5 +166,89 @@ public class OrdersController : ControllerBase
         command.PaymentId = paymentId;
         var result = await _mediator.SendCommand(command);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Send order confirmation emails to customer and admin
+    /// </summary>
+    [HttpPost("{orderId}/send-confirmation-email")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<string>>> SendOrderConfirmationEmail(Guid orderId)
+    {
+        try
+        {
+            // Get the order
+            var query = new GetOrderByIdQuery(orderId);
+            var orderResult = await _mediator.SendQuery(query);
+
+            if (!orderResult.Success || orderResult.Data == null)
+            {
+                return BadRequest(ApiResponse<string>.Failure("Order not found"));
+            }
+
+            var order = orderResult.Data;
+
+            // Prepare order items
+            var items = order.Items.Select(item => (
+                name: $"{item.ProductName}{(string.IsNullOrEmpty(item.VariationName) ? "" : $" - {item.VariationName}")}",
+                quantity: item.Quantity,
+                price: item.ItemTotal
+            )).ToList();
+
+            // Prepare delivery address if applicable
+            string? deliveryAddress = null;
+            if (order.DeliveryAddress != null)
+            {
+                deliveryAddress = $"{order.DeliveryAddress.AddressLine1}, " +
+                    $"{order.DeliveryAddress.PostalCode} {order.DeliveryAddress.City}, " +
+                    $"{order.DeliveryAddress.Country}";
+
+                if (!string.IsNullOrEmpty(order.DeliveryAddress.DeliveryInstructions))
+                {
+                    deliveryAddress += $"\n\nDelivery Instructions: {order.DeliveryAddress.DeliveryInstructions}";
+                }
+            }
+
+            // Send customer confirmation email
+            await _emailService.SendOrderConfirmationEmailAsync(
+                order.CustomerEmail ?? "noemail@example.com",
+                order.CustomerName ?? "Valued Customer",
+                order.OrderNumber,
+                order.Type.ToString(),
+                order.Total,
+                items,
+                order.Notes,
+                deliveryAddress);
+
+            // Send admin notification email (fire and forget - don't block on failure)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendOrderConfirmationAdminEmailAsync(
+                        AdminEmail,
+                        order.OrderNumber,
+                        order.CustomerName ?? "Valued Customer",
+                        order.CustomerEmail ?? "noemail@example.com",
+                        order.CustomerPhone ?? "Not provided",
+                        order.Type.ToString(),
+                        order.Total,
+                        items,
+                        order.Notes,
+                        deliveryAddress);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send admin notification email for order {OrderNumber}", order.OrderNumber);
+                }
+            });
+
+            return Ok(ApiResponse<string>.SuccessWithData("Order confirmation emails sent successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order confirmation emails for order {OrderId}", orderId);
+            return BadRequest(ApiResponse<string>.Failure($"Failed to send confirmation emails: {ex.Message}"));
+        }
     }
 }

@@ -272,4 +272,57 @@ public class EmailService : IEmailService
 
         return message;
     }
+
+    public async Task SendOrderConfirmationEmailAsync(string customerEmail, string customerName, string orderNumber,
+        string orderType, decimal total, IEnumerable<(string name, int quantity, decimal price)> items,
+        string? specialInstructions = null, string? deliveryAddress = null)
+    {
+        try
+        {
+            var subject = EmailTemplates.OrderConfirmation.Subject;
+            var htmlBody = EmailTemplates.OrderConfirmation.GetHtmlBody(
+                customerName, orderNumber, orderType, total, items, specialInstructions, deliveryAddress);
+            var textBody = EmailTemplates.OrderConfirmation.GetTextBody(
+                customerName, orderNumber, orderType, total, items, specialInstructions, deliveryAddress);
+
+            await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Order confirmation email sent to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order confirmation email to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+            throw;
+        }
+    }
+
+    public async Task SendOrderConfirmationAdminEmailAsync(string adminEmail, string orderNumber, string customerName,
+        string customerEmail, string customerPhone, string orderType, decimal total,
+        IEnumerable<(string name, int quantity, decimal price)> items, string? specialInstructions = null,
+        string? deliveryAddress = null)
+    {
+        try
+        {
+            var subject = EmailTemplates.OrderConfirmationAdmin.Subject;
+            var htmlBody = EmailTemplates.OrderConfirmationAdmin.GetHtmlBody(
+                orderNumber, customerName, customerEmail, customerPhone, orderType, total, items,
+                specialInstructions, deliveryAddress);
+            var textBody = EmailTemplates.OrderConfirmationAdmin.GetTextBody(
+                orderNumber, customerName, customerEmail, customerPhone, orderType, total, items,
+                specialInstructions, deliveryAddress);
+
+            await SendEmailAsync(adminEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Order notification email sent to admin {Email} for order {OrderNumber}",
+                adminEmail, orderNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order notification email to admin {Email} for order {OrderNumber}",
+                adminEmail, orderNumber);
+            throw;
+        }
+    }
 }
