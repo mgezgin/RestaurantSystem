@@ -51,12 +51,17 @@ public class OrderEventService : IOrderEventService
         };
 
         var kitchenClients = _clients.Values.Count(c => c.ClientType == ClientType.Kitchen);
-        _logger.LogInformation("Notifying {ClientCount} kitchen client(s) of new order {OrderNumber}", kitchenClients, order.OrderNumber);
+        var serviceClients = _clients.Values.Count(c => c.ClientType == ClientType.Service);
+        _logger.LogInformation("Notifying {KitchenCount} kitchen and {ServiceCount} service client(s) of new order {OrderNumber}",
+            kitchenClients, serviceClients, order.OrderNumber);
 
         // Notify kitchen staff of new orders
         await SendEventToClients(eventData, ClientType.Kitchen);
 
-        _logger.LogInformation("Kitchen notification sent for order {OrderNumber}", order.OrderNumber);
+        // Also notify service staff (cashiers) of new orders
+        await SendEventToClients(eventData, ClientType.Service);
+
+        _logger.LogInformation("Order creation notification sent for order {OrderNumber}", order.OrderNumber);
     }
 
     public async Task NotifyOrderStatusChanged(OrderDto order, string previousStatus)
