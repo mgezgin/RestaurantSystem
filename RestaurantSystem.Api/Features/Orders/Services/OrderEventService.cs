@@ -50,10 +50,13 @@ public class OrderEventService : IOrderEventService
             Timestamp = DateTime.UtcNow
         };
 
+        var kitchenClients = _clients.Values.Count(c => c.ClientType == ClientType.Kitchen);
+        _logger.LogInformation("Notifying {ClientCount} kitchen client(s) of new order {OrderNumber}", kitchenClients, order.OrderNumber);
+
         // Notify kitchen staff of new orders
         await SendEventToClients(eventData, ClientType.Kitchen);
 
-        _logger.LogInformation("Notified kitchen staff of new order {OrderNumber}", order.OrderNumber);
+        _logger.LogInformation("Kitchen notification sent for order {OrderNumber}", order.OrderNumber);
     }
 
     public async Task NotifyOrderStatusChanged(OrderDto order, string previousStatus)

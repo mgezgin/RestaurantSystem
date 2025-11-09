@@ -9,10 +9,10 @@ namespace RestaurantSystem.Api.Features.Orders;
 [Route("api/[controller]")]
 public class EventsController : ControllerBase
 {
-    private readonly OrderEventService _orderEventService;
+    private readonly IOrderEventService _orderEventService;
     private readonly ILogger<EventsController> _logger;
 
-    public EventsController(OrderEventService orderEventService, ILogger<EventsController> logger)
+    public EventsController(IOrderEventService orderEventService, ILogger<EventsController> logger)
     {
         _orderEventService = orderEventService;
         _logger = logger;

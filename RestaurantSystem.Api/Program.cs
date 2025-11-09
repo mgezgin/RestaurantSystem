@@ -232,9 +232,9 @@ builder.Services.AddScoped<ITaxConfigurationService, TaxConfigurationService>();
 builder.Services.AddScoped<LoginEventHandler>();
 builder.Services.AddHostedService<BasketCleanupService>();
 
+// Register OrderEventService as singleton - both interface and concrete type share same instance
 builder.Services.AddSingleton<OrderEventService>();
-builder.Services.AddSingleton<IOrderEventService>(provider =>
-    provider.GetRequiredService<OrderEventService>());
+builder.Services.AddSingleton<IOrderEventService>(sp => sp.GetRequiredService<OrderEventService>());
 
 
 var app = builder.Build();
