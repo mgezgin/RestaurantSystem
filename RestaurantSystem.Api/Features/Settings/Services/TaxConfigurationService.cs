@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Api.Features.Settings.Interfaces;
+using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
 
@@ -33,6 +34,17 @@ public class TaxConfigurationService : ITaxConfigurationService
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
 
+    public async Task<TaxConfiguration?> GetTaxConfigurationByOrderTypeAsync(OrderType orderType, CancellationToken cancellationToken = default)
+    {
+        var orderTypeValue = ((int)orderType).ToString();
+        
+        return await _context.TaxConfigurations
+            .AsNoTracking()
+            .Where(t => t.IsEnabled && 
+                       (t.ApplicableOrderTypes.Contains(orderTypeValue) || string.IsNullOrEmpty(t.ApplicableOrderTypes)))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<List<TaxConfiguration>> GetAllTaxConfigurationsAsync(CancellationToken cancellationToken = default)
     {
         return await _context.TaxConfigurations
@@ -44,21 +56,6 @@ public class TaxConfigurationService : ITaxConfigurationService
 
     public async Task<TaxConfiguration> CreateTaxConfigurationAsync(TaxConfiguration taxConfiguration, CancellationToken cancellationToken = default)
     {
-        // If this tax is enabled, disable all others
-        if (taxConfiguration.IsEnabled)
-        {
-            var existingTaxes = await _context.TaxConfigurations
-                .Where(t => t.IsEnabled)
-                .ToListAsync(cancellationToken);
-
-            foreach (var tax in existingTaxes)
-            {
-                tax.IsEnabled = false;
-                tax.UpdatedAt = DateTime.UtcNow;
-                tax.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
-            }
-        }
-
         taxConfiguration.CreatedAt = DateTime.UtcNow;
         taxConfiguration.CreatedBy = _currentUserService.UserId?.ToString() ?? "System";
 
@@ -76,25 +73,11 @@ public class TaxConfigurationService : ITaxConfigurationService
         if (existing == null)
             throw new InvalidOperationException($"Tax configuration with ID {taxConfiguration.Id} not found");
 
-        // If this tax is being enabled, disable all others
-        if (taxConfiguration.IsEnabled && !existing.IsEnabled)
-        {
-            var otherTaxes = await _context.TaxConfigurations
-                .Where(t => t.Id != taxConfiguration.Id && t.IsEnabled)
-                .ToListAsync(cancellationToken);
-
-            foreach (var tax in otherTaxes)
-            {
-                tax.IsEnabled = false;
-                tax.UpdatedAt = DateTime.UtcNow;
-                tax.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
-            }
-        }
-
         existing.Name = taxConfiguration.Name;
         existing.Rate = taxConfiguration.Rate;
         existing.IsEnabled = taxConfiguration.IsEnabled;
         existing.Description = taxConfiguration.Description;
+        existing.ApplicableOrderTypes = taxConfiguration.ApplicableOrderTypes;
         existing.UpdatedAt = DateTime.UtcNow;
         existing.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
 
@@ -122,6 +105,18 @@ public class TaxConfigurationService : ITaxConfigurationService
         if (activeTax == null || !activeTax.IsEnabled)
             return 0;
 
-        return Math.Round(amount * activeTax.Rate, 2);
+        // Rate is stored as percentage (e.g., 8.1 for 8.1%), so divide by 100
+        return Math.Round(amount * activeTax.Rate / 100, 2);
+    }
+
+    public async Task<decimal> CalculateTaxByOrderTypeAsync(decimal amount, OrderType orderType, CancellationToken cancellationToken = default)
+    {
+        var tax = await GetTaxConfigurationByOrderTypeAsync(orderType, cancellationToken);
+        
+        if (tax == null || !tax.IsEnabled)
+            return 0;
+
+        // Rate is stored as percentage (e.g., 8.1 for 8.1%), so divide by 100
+        return Math.Round(amount * tax.Rate / 100, 2);
     }
 }

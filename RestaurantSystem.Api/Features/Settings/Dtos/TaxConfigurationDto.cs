@@ -1,3 +1,5 @@
+using RestaurantSystem.Domain.Common.Enums;
+
 namespace RestaurantSystem.Api.Features.Settings.Dtos;
 
 public class TaxConfigurationDto
@@ -7,6 +9,7 @@ public class TaxConfigurationDto
     public decimal Rate { get; set; }
     public bool IsEnabled { get; set; }
     public string Description { get; set; } = string.Empty;
+    public List<OrderType> ApplicableOrderTypes { get; set; } = new();
 }
 
 public class CreateTaxConfigurationDto
@@ -15,6 +18,7 @@ public class CreateTaxConfigurationDto
     public decimal Rate { get; set; }
     public bool IsEnabled { get; set; }
     public string Description { get; set; } = string.Empty;
+    public List<OrderType> ApplicableOrderTypes { get; set; } = new();
 }
 
 public class UpdateTaxConfigurationDto
@@ -24,4 +28,5 @@ public class UpdateTaxConfigurationDto
     public decimal Rate { get; set; }
     public bool IsEnabled { get; set; }
     public string Description { get; set; } = string.Empty;
+    public List<OrderType> ApplicableOrderTypes { get; set; } = new();
 }

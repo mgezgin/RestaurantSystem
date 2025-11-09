@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Settings.Dtos;
 using RestaurantSystem.Api.Features.Settings.Interfaces;
+using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 
 namespace RestaurantSystem.Api.Features.Settings;
@@ -18,6 +19,25 @@ public class TaxConfigurationController : ControllerBase
         _taxConfigurationService = taxConfigurationService;
     }
 
+    private static List<OrderType> ParseApplicableOrderTypes(string? applicableOrderTypes)
+    {
+        if (string.IsNullOrWhiteSpace(applicableOrderTypes))
+            return new List<OrderType>();
+
+        return applicableOrderTypes
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => (OrderType)int.Parse(x.Trim()))
+            .ToList();
+    }
+
+    private static string SerializeApplicableOrderTypes(List<OrderType> orderTypes)
+    {
+        if (orderTypes == null || orderTypes.Count == 0)
+            return string.Empty;
+
+        return string.Join(",", orderTypes.Select(ot => ((int)ot).ToString()));
+    }
+
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<ApiResponse<List<TaxConfigurationDto>>> GetAll(CancellationToken cancellationToken)
@@ -30,7 +50,8 @@ public class TaxConfigurationController : ControllerBase
             Name = t.Name,
             Rate = t.Rate,
             IsEnabled = t.IsEnabled,
-            Description = t.Description
+            Description = t.Description,
+            ApplicableOrderTypes = ParseApplicableOrderTypes(t.ApplicableOrderTypes)
         }).ToList();
 
         return ApiResponse<List<TaxConfigurationDto>>.SuccessWithData(dtos);
@@ -50,7 +71,29 @@ public class TaxConfigurationController : ControllerBase
             Name = taxConfiguration.Name,
             Rate = taxConfiguration.Rate,
             IsEnabled = taxConfiguration.IsEnabled,
-            Description = taxConfiguration.Description
+            Description = taxConfiguration.Description,
+            ApplicableOrderTypes = ParseApplicableOrderTypes(taxConfiguration.ApplicableOrderTypes)
+        };
+
+        return ApiResponse<TaxConfigurationDto?>.SuccessWithData(dto);
+    }
+
+    [HttpGet("by-order-type/{orderType}")]
+    public async Task<ApiResponse<TaxConfigurationDto?>> GetByOrderType(OrderType orderType, CancellationToken cancellationToken)
+    {
+        var taxConfiguration = await _taxConfigurationService.GetTaxConfigurationByOrderTypeAsync(orderType, cancellationToken);
+        
+        if (taxConfiguration == null)
+            return ApiResponse<TaxConfigurationDto?>.SuccessWithData(null);
+
+        var dto = new TaxConfigurationDto
+        {
+            Id = taxConfiguration.Id,
+            Name = taxConfiguration.Name,
+            Rate = taxConfiguration.Rate,
+            IsEnabled = taxConfiguration.IsEnabled,
+            Description = taxConfiguration.Description,
+            ApplicableOrderTypes = ParseApplicableOrderTypes(taxConfiguration.ApplicableOrderTypes)
         };
 
         return ApiResponse<TaxConfigurationDto?>.SuccessWithData(dto);
@@ -71,7 +114,8 @@ public class TaxConfigurationController : ControllerBase
             Name = taxConfiguration.Name,
             Rate = taxConfiguration.Rate,
             IsEnabled = taxConfiguration.IsEnabled,
-            Description = taxConfiguration.Description
+            Description = taxConfiguration.Description,
+            ApplicableOrderTypes = ParseApplicableOrderTypes(taxConfiguration.ApplicableOrderTypes)
         };
 
         return ApiResponse<TaxConfigurationDto>.SuccessWithData(dto);
@@ -89,6 +133,7 @@ public class TaxConfigurationController : ControllerBase
             Rate = dto.Rate,
             IsEnabled = dto.IsEnabled,
             Description = dto.Description,
+            ApplicableOrderTypes = SerializeApplicableOrderTypes(dto.ApplicableOrderTypes),
             CreatedBy = "Admin" // Will be set by service
         };
 
@@ -100,7 +145,8 @@ public class TaxConfigurationController : ControllerBase
             Name = created.Name,
             Rate = created.Rate,
             IsEnabled = created.IsEnabled,
-            Description = created.Description
+            Description = created.Description,
+            ApplicableOrderTypes = ParseApplicableOrderTypes(created.ApplicableOrderTypes)
         };
 
         return ApiResponse<TaxConfigurationDto>.SuccessWithData(resultDto, "Tax configuration created successfully");
@@ -119,6 +165,7 @@ public class TaxConfigurationController : ControllerBase
             Rate = dto.Rate,
             IsEnabled = dto.IsEnabled,
             Description = dto.Description,
+            ApplicableOrderTypes = SerializeApplicableOrderTypes(dto.ApplicableOrderTypes),
             CreatedBy = "System" // Will be preserved by service
         };
 
@@ -132,7 +179,8 @@ public class TaxConfigurationController : ControllerBase
                 Name = updated.Name,
                 Rate = updated.Rate,
                 IsEnabled = updated.IsEnabled,
-                Description = updated.Description
+                Description = updated.Description,
+                ApplicableOrderTypes = ParseApplicableOrderTypes(updated.ApplicableOrderTypes)
             };
 
             return ApiResponse<TaxConfigurationDto>.SuccessWithData(resultDto, "Tax configuration updated successfully");

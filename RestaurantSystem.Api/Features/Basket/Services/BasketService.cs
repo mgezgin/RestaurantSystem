@@ -527,12 +527,13 @@ public class BasketService : IBasketService
         // Store the customer discount in the basket
         basket.CustomerDiscount = customerDiscountAmount;
 
-        // Calculate tax on the amount after customer discount
-        decimal amountAfterDiscount = basket.SubTotal - customerDiscountAmount - basket.Discount;
-        basket.Tax = await _taxConfigurationService.CalculateTaxAsync(amountAfterDiscount);
+        // Tax will be calculated later during order creation when order type is known
+        // This is important for Swiss tax compliance (different rates for Dine-In vs Takeaway/Delivery)
+        basket.Tax = 0;
 
-        // Calculate total before rounding
-        decimal calculatedTotal = amountAfterDiscount + basket.Tax + basket.DeliveryFee;
+        // Calculate total before rounding (without tax since order type is not yet known)
+        decimal amountAfterDiscount = basket.SubTotal - customerDiscountAmount - basket.Discount;
+        decimal calculatedTotal = amountAfterDiscount + basket.DeliveryFee;
         
         // Apply special rounding for discounted customers
         basket.Total = PriceRoundingUtility.ApplySpecialRounding(calculatedTotal, hasDiscount);

@@ -186,7 +186,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
 
             // Calculate order totals
             order.SubTotal = subTotal;
-            order.Tax = await CalculateTax(subTotal);
+            order.Tax = await CalculateTax(subTotal, command.Type, cancellationToken);
             order.DeliveryFee = command.Type == OrderType.Delivery ? CalculateDeliveryFee() : 0;
 
             // Apply user discount
@@ -379,9 +379,9 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         return $"{date}{sequence:D4}";
     }
 
-    private async Task<decimal> CalculateTax(decimal subTotal)
+    private async Task<decimal> CalculateTax(decimal subTotal, OrderType orderType, CancellationToken cancellationToken)
     {
-        return await _taxConfigurationService.CalculateTaxAsync(subTotal);
+        return await _taxConfigurationService.CalculateTaxByOrderTypeAsync(subTotal, orderType, cancellationToken);
     }
 
     private decimal CalculateDeliveryFee()
