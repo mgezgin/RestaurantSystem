@@ -288,40 +288,29 @@ public static class TableSeeder
             }
         };
 
-        // Check if tables already exist - update or insert
+        // Check if tables already exist
         var existingTables = await context.Tables.ToListAsync();
 
         if (existingTables.Any())
         {
-            logger.LogInformation("Updating {Count} existing tables with new positions...", existingTables.Count);
+            // Tables already exist, only add missing ones (don't overwrite user customizations)
+            var missingTables = tables.Where(t => !existingTables.Any(e => e.TableNumber == t.TableNumber)).ToList();
 
-            foreach (var newTable in tables)
+            if (missingTables.Any())
             {
-                var existing = existingTables.FirstOrDefault(t => t.TableNumber == newTable.TableNumber);
-                if (existing != null)
-                {
-                    // Update positions and properties
-                    existing.PositionX = newTable.PositionX;
-                    existing.PositionY = newTable.PositionY;
-                    existing.Width = newTable.Width;
-                    existing.Height = newTable.Height;
-                    existing.MaxGuests = newTable.MaxGuests;
-                    existing.IsOutdoor = newTable.IsOutdoor;
-                    existing.IsActive = newTable.IsActive;
-                    existing.Shape = newTable.Shape;
-                }
-                else
-                {
-                    // Add new table if it doesn't exist
-                    await context.Tables.AddAsync(newTable);
-                }
+                logger.LogInformation("Adding {Count} missing tables...", missingTables.Count);
+                await context.Tables.AddRangeAsync(missingTables);
+                await context.SaveChangesAsync();
+                logger.LogInformation($"Successfully added {missingTables.Count} missing tables");
             }
-
-            await context.SaveChangesAsync();
-            logger.LogInformation("Successfully updated table positions");
+            else
+            {
+                logger.LogInformation("All tables already exist. Skipping seeding to preserve user customizations.");
+            }
         }
         else
         {
+            // First time seeding - insert all default tables
             await context.Tables.AddRangeAsync(tables);
             await context.SaveChangesAsync();
             logger.LogInformation($"Successfully seeded {tables.Count} tables");
