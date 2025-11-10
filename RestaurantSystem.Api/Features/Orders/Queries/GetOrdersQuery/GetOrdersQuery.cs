@@ -55,8 +55,15 @@ public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, ApiResponse<P
             .Where(o => !o.IsDeleted)
             .AsQueryable();
 
-        // For non-admin users, automatically filter to their own orders
-        if (!_currentUserService.IsAdmin && _currentUserService.UserId.HasValue)
+        // Determine if user is staff (Admin, Cashier, KitchenStaff, or Server)
+        // Staff members can see all orders, customers only see their own
+        var isStaff = _currentUserService.IsAdmin ||
+                      _currentUserService.Role == UserRole.Cashier ||
+                      _currentUserService.Role == UserRole.KitchenStaff ||
+                      _currentUserService.Role == UserRole.Server;
+
+        // For non-staff users, automatically filter to their own orders
+        if (!isStaff && _currentUserService.UserId.HasValue)
         {
             ordersQuery = ordersQuery.Where(o => o.UserId == _currentUserService.UserId.Value);
         }
