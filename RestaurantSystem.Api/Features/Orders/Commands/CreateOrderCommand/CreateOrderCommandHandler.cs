@@ -271,10 +271,13 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             order.TotalPaid = totalPaid;
             order.RemainingAmount = order.Total - totalPaid;
 
-            // Update payment status based on payments
-            if (order.RemainingAmount <= 0)
+            // Update payment status with tolerance for floating point precision in financial calculations
+            // Use 0.01 (1 cent) as tolerance to handle rounding errors
+            const decimal tolerance = 0.01m;
+            if (order.RemainingAmount <= tolerance)
             {
-                order.PaymentStatus = order.RemainingAmount < 0 ? PaymentStatus.Overpaid : PaymentStatus.Completed;
+                // If remaining is within tolerance of zero or negative, it's fully paid or overpaid
+                order.PaymentStatus = order.RemainingAmount < -tolerance ? PaymentStatus.Overpaid : PaymentStatus.Completed;
                 // Process any immediate payments (e.g., credit card)
                 foreach (var payment in order.Payments.Where(p => p.PaymentMethod != PaymentMethod.Cash))
                 {

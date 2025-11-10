@@ -81,14 +81,24 @@ public class RefundPaymentCommandHandler : ICommandHandler<RefundPaymentCommand,
                           - order.Payments.Where(p => p.RefundedAmount.HasValue).Sum(p => p.RefundedAmount ?? 0);
         order.RemainingAmount = order.Total - order.TotalPaid;
 
-        // Update order payment status
+        // Update order payment status with tolerance for floating point precision
+        const decimal tolerance = 0.01m;
         if (order.Payments.All(p => p.Status == PaymentStatus.Refunded))
         {
             order.PaymentStatus = PaymentStatus.Refunded;
         }
-        else if (order.RemainingAmount > 0)
+        else if (order.RemainingAmount > tolerance)
         {
             order.PaymentStatus = order.TotalPaid > 0 ? PaymentStatus.PartiallyPaid : PaymentStatus.Pending;
+        }
+        else if (order.RemainingAmount <= -tolerance)
+        {
+            order.PaymentStatus = PaymentStatus.Overpaid;
+        }
+        else
+        {
+            // Within tolerance of zero - fully paid
+            order.PaymentStatus = PaymentStatus.Completed;
         }
 
         order.UpdatedAt = DateTime.UtcNow;

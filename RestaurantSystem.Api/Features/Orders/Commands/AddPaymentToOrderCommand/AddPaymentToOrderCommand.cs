@@ -92,14 +92,17 @@ public class AddPaymentToOrderCommandHandler : ICommandHandler<AddPaymentToOrder
             payment.Status = PaymentStatus.Completed;
         }
 
-        // Update order payment summary
+        // Update order payment summary - sum all completed payments
         order.TotalPaid = order.Payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount);
         order.RemainingAmount = order.Total - order.TotalPaid;
 
-        // Update order payment status
-        if (order.RemainingAmount <= 0)
+        // Update order payment status with tolerance for floating point precision in financial calculations
+        // Use 0.01 (1 cent) as tolerance to handle rounding errors
+        const decimal tolerance = 0.01m;
+        if (order.RemainingAmount <= tolerance)
         {
-            order.PaymentStatus = order.RemainingAmount < 0 ? PaymentStatus.Overpaid : PaymentStatus.Completed;
+            // If remaining is within tolerance of zero or negative, it's fully paid or overpaid
+            order.PaymentStatus = order.RemainingAmount < -tolerance ? PaymentStatus.Overpaid : PaymentStatus.Completed;
         }
         else if (order.TotalPaid > 0)
         {
