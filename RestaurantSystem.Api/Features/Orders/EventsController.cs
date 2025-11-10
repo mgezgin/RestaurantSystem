@@ -63,10 +63,12 @@ public class EventsController : ControllerBase
     {
         var clientId = Guid.NewGuid().ToString();
 
-        Response.Headers.Add("Content-Type", "text/event-stream");
-        Response.Headers.Add("Cache-Control", "no-cache");
-        Response.Headers.Add("Connection", "keep-alive");
-        Response.Headers.Add("X-Accel-Buffering", "no"); // Disable Nginx buffering
+        // Set response headers BEFORE writing any data
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers.Connection = "keep-alive";
+        Response.Headers["X-Accel-Buffering"] = "no"; // Disable Nginx buffering
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
 
         var client = new OrderEventService.SseClient
         {
@@ -78,13 +80,24 @@ public class EventsController : ControllerBase
 
         _orderEventService.AddClient(clientId, client);
 
+        _logger.LogInformation("SSE client connected: {ClientId} with type {ClientType}", clientId, clientType);
+
         try
         {
             // Send initial connection event
-            await Response.WriteAsync($"event: connected\ndata: {{\"clientId\":\"{clientId}\",\"clientType\":\"{clientType}\"}}\n\n", cancellationToken);
+            var connectionData = new
+            {
+                clientId,
+                clientType = clientType.ToString(),
+                timestamp = DateTime.UtcNow
+            };
+            var connectionJson = System.Text.Json.JsonSerializer.Serialize(connectionData,
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+
+            await Response.WriteAsync($"event: connected\ndata: {connectionJson}\n\n", cancellationToken);
             await Response.Body.FlushAsync(cancellationToken);
 
-            // Keep connection alive
+            // Keep connection alive with heartbeats
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(30000, cancellationToken); // Send heartbeat every 30 seconds
@@ -98,6 +111,7 @@ public class EventsController : ControllerBase
         }
         finally
         {
+            _logger.LogInformation("SSE client disconnected: {ClientId}", clientId);
             _orderEventService.RemoveClient(clientId);
         }
     }

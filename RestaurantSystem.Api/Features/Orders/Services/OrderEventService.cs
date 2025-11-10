@@ -162,23 +162,36 @@ public class OrderEventService : IOrderEventService
         var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n\n";
         var eventBytes = Encoding.UTF8.GetBytes(eventMessage);
 
+        var targetClients = _clients.Values.Where(c =>
+            targetClientType == ClientType.All || c.ClientType == targetClientType).ToList();
+
+        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
+            eventData.EventType, targetClients.Count, targetClientType);
+
         var tasks = new List<Task>();
 
-        foreach (var client in _clients.Values.Where(c =>
-            targetClientType == ClientType.All || c.ClientType == targetClientType))
+        foreach (var client in targetClients)
         {
             tasks.Add(SendToClient(client, eventBytes));
         }
 
-        await Task.WhenAll(tasks);
+        if (tasks.Count > 0)
+        {
+            await Task.WhenAll(tasks);
+        }
     }
 
     private async Task SendToClient(SseClient client, byte[] eventBytes)
     {
         try
         {
+            _logger.LogDebug("Sending event to client {ClientId} ({ClientType}), {ByteCount} bytes",
+                client.ClientId, client.ClientType, eventBytes.Length);
+
             await client.Response.Body.WriteAsync(eventBytes);
             await client.Response.Body.FlushAsync();
+
+            _logger.LogDebug("Event successfully sent to client {ClientId}", client.ClientId);
         }
         catch (Exception ex)
         {
