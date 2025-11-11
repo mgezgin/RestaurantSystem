@@ -244,7 +244,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             order.Total = PriceRoundingUtility.ApplySpecialRounding(calculatedTotal, hasActiveDiscount);
 
             // Process payments
-            decimal totalPaid = 0;
             foreach (var paymentDto in command.Payments)
             {
                 var payment = new OrderPayment
@@ -263,9 +262,20 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
 
+                // Only mark non-Cash payments as completed immediately
+                // Cash payments remain Pending until explicitly completed via AddPaymentToOrder
+                if (payment.PaymentMethod != PaymentMethod.Cash)
+                {
+                    payment.Status = PaymentStatus.Completed;
+                    // Here you would integrate with payment gateways
+                }
+
                 order.Payments.Add(payment);
-                totalPaid += payment.Amount;
             }
+
+            // Calculate totalPaid from only completed payments
+            // Cash payments created with Pending status should not count until explicitly completed
+            decimal totalPaid = order.Payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount);
 
             // Update payment summary
             order.TotalPaid = totalPaid;
@@ -278,16 +288,14 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             {
                 // If remaining is within tolerance of zero or negative, it's fully paid or overpaid
                 order.PaymentStatus = order.RemainingAmount < -tolerance ? PaymentStatus.Overpaid : PaymentStatus.Completed;
-                // Process any immediate payments (e.g., credit card)
-                foreach (var payment in order.Payments.Where(p => p.PaymentMethod != PaymentMethod.Cash))
-                {
-                    payment.Status = PaymentStatus.Completed;
-                    // Here you would integrate with payment gateways
-                }
             }
             else if (totalPaid > 0)
             {
                 order.PaymentStatus = PaymentStatus.PartiallyPaid;
+            }
+            else
+            {
+                order.PaymentStatus = PaymentStatus.Pending;
             }
 
             // Add initial status history
