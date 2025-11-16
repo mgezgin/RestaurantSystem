@@ -184,19 +184,31 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 }
             }
 
-            // Calculate order totals
-            order.SubTotal = subTotal;
-            order.Tax = await CalculateTax(subTotal, command.Type, cancellationToken);
+            // REFACTORED TAX FLOW: Tax is extracted from item prices for display only
+            // It does NOT affect the final customer payment
+            // Example: Product 16.90 → Tax extracted 0.44 → SubTotal shown 16.46 → Customer pays 16.90
+
+            // itemsTotal = sum of all item prices (what customer pays for items)
+            decimal itemsTotal = subTotal;
+
+            // Calculate tax on items total - this is for display/bills only
+            order.Tax = await CalculateTax(itemsTotal, command.Type, cancellationToken);
+
+            // SubTotal = items total minus the extracted tax (for display purposes)
+            order.SubTotal = itemsTotal - order.Tax;
+
+            // DeliveryFee is added to final price
             order.DeliveryFee = command.Type == OrderType.Delivery ? CalculateDeliveryFee() : 0;
 
-            // Apply user discount
-            if (command.HasUserLimitDiscount && subTotal >= command.UserLimitAmount)
+            // Apply user discount (calculated on items total, before tax extraction)
+            if (command.HasUserLimitDiscount && itemsTotal >= command.UserLimitAmount)
             {
                 var user = await _context.Users.FindAsync(userId);
                 if (user != null && user.IsDiscountActive)
                 {
                     order.DiscountPercentage = user.DiscountPercentage;
-                    order.Discount = order.SubTotal * (user.DiscountPercentage / 100);
+                    // Discount applies to items total (before tax extraction)
+                    order.Discount = itemsTotal * (user.DiscountPercentage / 100);
                 }
             }
 
@@ -204,20 +216,21 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             if (userId.HasValue)
             {
                 var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
-                    userId.Value, 
-                    subTotal, 
+                    userId.Value,
+                    itemsTotal,
                     cancellationToken);
 
                 if (customerDiscount != null)
                 {
-                    var discountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, subTotal);
+                    // Discount calculated on items total (before tax extraction)
+                    var discountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, itemsTotal);
                     order.CustomerDiscountAmount = discountAmount;
                     order.CustomerDiscountRuleId = customerDiscount.Id;
-                    
+
                     // Apply the discount and increment usage count
                     await _customerDiscountService.ApplyDiscountAsync(customerDiscount.Id, cancellationToken);
-                    
-                    _logger.LogInformation("Applied customer discount {DiscountName} of ${Amount} to order", 
+
+                    _logger.LogInformation("Applied customer discount {DiscountName} of ${Amount} to order",
                         customerDiscount.Name, discountAmount);
                 }
             }
@@ -226,15 +239,16 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             // Note: This would come from command.PointsToRedeem in a future update
             // For now, we'll just calculate points to earn
 
-            // Calculate total before fidelity discount
-            var totalBeforeFidelity = order.SubTotal + order.Tax + order.DeliveryFee - order.Discount - order.CustomerDiscountAmount;
+            // Calculate total: Items + DeliveryFee - Discounts - FidelityDiscount
+            // NOTE: Tax is NOT added to total - it's extracted from items and shown for display only
+            var totalBeforeFidelity = itemsTotal + order.DeliveryFee - order.Discount - order.CustomerDiscountAmount;
 
             // Calculate fidelity points to earn for this order
             if (userId.HasValue)
             {
-                var pointsToEarn = await _fidelityPointsService.CalculatePointsForOrderAsync(subTotal, cancellationToken);
+                var pointsToEarn = await _fidelityPointsService.CalculatePointsForOrderAsync(itemsTotal, cancellationToken);
                 order.FidelityPointsEarned = pointsToEarn;
-                
+
                 _logger.LogInformation("Order will earn {Points} fidelity points", pointsToEarn);
             }
 
