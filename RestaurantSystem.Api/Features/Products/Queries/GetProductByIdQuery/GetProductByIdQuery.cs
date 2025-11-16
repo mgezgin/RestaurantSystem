@@ -57,6 +57,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             IsSpecial = product.IsSpecial,
             PreparationTimeMinutes = product.PreparationTimeMinutes,
             Type = product.Type,
+            KitchenType = product.KitchenType,
             Ingredients = product.Ingredients,
             Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,

@@ -20,6 +20,7 @@ public record UpdateProductCommand(
     bool IsSpecial,
     int PreparationTimeMinutes,
     ProductType Type,
+    KitchenType KitchenType,
     List<string>? Ingredients,
     List<string>? Allergens,
     int DisplayOrder,
@@ -89,6 +90,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         product.IsSpecial = command.IsSpecial;
         product.PreparationTimeMinutes = command.PreparationTimeMinutes;
         product.Type = command.Type;
+        product.KitchenType = command.KitchenType;
         product.Ingredients = command.Ingredients;
         product.Allergens = command.Allergens;
         product.DisplayOrder = command.DisplayOrder;

@@ -100,7 +100,8 @@ public class OrderMappingService : IOrderMappingService
             Quantity = item.Quantity,
             UnitPrice = item.UnitPrice,
             ItemTotal = item.ItemTotal,
-            SpecialInstructions = item.SpecialInstructions
+            SpecialInstructions = item.SpecialInstructions,
+            KitchenType = item.Product?.KitchenType.ToString()
         };
     }
 
@@ -152,6 +153,18 @@ public class OrderMappingService : IOrderMappingService
         if (!_context.Entry(order).Collection(o => o.Items).IsLoaded)
         {
             await _context.Entry(order).Collection(o => o.Items).LoadAsync(cancellationToken);
+        }
+
+        // Load Product for each item to access KitchenType
+        if (order.Items != null)
+        {
+            foreach (var item in order.Items)
+            {
+                if (!_context.Entry(item).Reference(i => i.Product).IsLoaded)
+                {
+                    await _context.Entry(item).Reference(i => i.Product).LoadAsync(cancellationToken);
+                }
+            }
         }
 
         if (!_context.Entry(order).Collection(o => o.Payments).IsLoaded)

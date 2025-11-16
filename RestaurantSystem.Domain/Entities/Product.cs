@@ -15,6 +15,7 @@ public class Product : SoftDeleteEntity
     public DateTime? FeaturedDate { get; set; } // Date when this was set as featured
     public int PreparationTimeMinutes { get; set; }
     public ProductType Type { get; set; } = ProductType.MainItem;
+    public KitchenType KitchenType { get; set; } = KitchenType.None; // Front or Back kitchen designation
     public List<string>? Ingredients { get; set; } // JSON array of ingredients
     public List<string>? Allergens { get; set; } // JSON array of allergens
     public int DisplayOrder { get; set; }

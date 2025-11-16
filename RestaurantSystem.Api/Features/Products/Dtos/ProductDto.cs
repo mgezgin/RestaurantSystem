@@ -17,6 +17,7 @@ public record ProductDto
     public bool IsSpecial { get; init; } // Is this a special menu (e.g., holiday menu)
     public int PreparationTimeMinutes { get; init; }
     public ProductType Type { get; init; }
+    public KitchenType KitchenType { get; init; } // Front or Back kitchen designation
     public List<string>? Ingredients { get; init; } = [];
     public List<ProductIngredientDto>? DetailedIngredients { get; init; } = [];
     public List<string>? Allergens { get; init; } = [];
