@@ -66,11 +66,13 @@ public class AddPaymentToOrderCommandHandler : ICommandHandler<AddPaymentToOrder
         foreach (var placeholder in pendingPlaceholders)
         {
             _context.OrderPayments.Remove(placeholder);
-            order.Payments.Remove(placeholder);
         }
 
         // Save the removal of placeholder payments first
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Clear the in-memory collection to ensure we don't have stale references to removed payments
+        order.Payments.Clear();
 
         var payment = new OrderPayment
         {
