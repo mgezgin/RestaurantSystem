@@ -104,13 +104,9 @@ public class AddPaymentToOrderCommandHandler : ICommandHandler<AddPaymentToOrder
             payment.Status = PaymentStatus.Completed;
         }
 
-        // Update order payment summary - sum all completed payments from database
-        // Reload payments from database to ensure we have the current state after removing placeholder
-        var currentPayments = await _context.OrderPayments
-            .Where(p => p.OrderId == order.Id)
-            .ToListAsync(cancellationToken);
-
-        var completedPaymentTotal = currentPayments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount);
+        // Update order payment summary - sum all completed payments
+        // Use the in-memory order.Payments collection since we just removed placeholders and added the new payment
+        decimal completedPaymentTotal = order.Payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount);
         order.TotalPaid = completedPaymentTotal;
         order.RemainingAmount = order.Total - order.TotalPaid;
 
