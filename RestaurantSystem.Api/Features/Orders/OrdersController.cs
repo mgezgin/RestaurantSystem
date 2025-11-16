@@ -89,7 +89,7 @@ public class OrdersController : ControllerBase
     /// </summary>
     [HttpPost("{orderId}/payments")]
     [Authorize]
-    public async Task<ActionResult<ApiResponse<OrderPaymentDto>>> AddPayment(
+    public async Task<ActionResult<ApiResponse<OrderDto>>> AddPayment(
         Guid orderId,
         [FromBody] AddPaymentToOrderCommand command)
     {

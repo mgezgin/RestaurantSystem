@@ -109,6 +109,7 @@ public class OrderMappingService : IOrderMappingService
         return new OrderPaymentDto
         {
             Id = payment.Id,
+            OrderId = payment.OrderId,
             PaymentMethod = payment.PaymentMethod.ToString(),
             Amount = payment.Amount,
             Status = payment.Status.ToString(),
