@@ -60,6 +60,15 @@ public class AddPaymentToOrderCommandHandler : ICommandHandler<AddPaymentToOrder
             return ApiResponse<OrderPaymentDto>.Failure("Order is already fully paid");
         }
 
+        // Remove any existing Pending placeholder payments from order creation
+        // These are placeholder payments that should be replaced when the actual payment is added
+        var pendingPlaceholders = order.Payments.Where(p => p.Status == PaymentStatus.Pending).ToList();
+        foreach (var placeholder in pendingPlaceholders)
+        {
+            _context.OrderPayments.Remove(placeholder);
+            order.Payments.Remove(placeholder);
+        }
+
         var payment = new OrderPayment
         {
             OrderId = order.Id,
