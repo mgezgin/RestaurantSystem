@@ -191,8 +191,10 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                         Name = ingredientDto.Name,
                         IsOptional = ingredientDto.IsOptional,
                         Price = ingredientDto.Price,
+                        IsIncludedInBasePrice = ingredientDto.IsIncludedInBasePrice,
                         IsActive = ingredientDto.IsActive,
                         DisplayOrder = ingredientDto.DisplayOrder,
+                        MaxQuantity = ingredientDto.MaxQuantity,
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                     };
@@ -286,8 +288,10 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 Name = di.Name,
                 IsOptional = di.IsOptional,
                 Price = di.Price,
+                IsIncludedInBasePrice = di.IsIncludedInBasePrice,
                 IsActive = di.IsActive,
                 DisplayOrder = di.DisplayOrder,
+                MaxQuantity = di.MaxQuantity,
                 Content = di.Descriptions
                     .GroupBy(d => d.LanguageCode)
                     .Select(g => g.First()) // Take first if duplicates exist

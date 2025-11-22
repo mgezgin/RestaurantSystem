@@ -16,6 +16,7 @@ public class BasketItem : Entity
     public List<Guid>? SelectedIngredients { get; set; } // IDs of selected optional ingredients
     public List<Guid>? ExcludedIngredients { get; set; } // IDs of default ingredients to exclude
     public List<Guid>? AddedIngredients { get; set; } // IDs of optional ingredients added
+    public string? IngredientQuantitiesJson { get; set; } // JSON: { ingredientId: quantity }
     public decimal CustomizationPrice { get; set; } = 0; // Additional price from customizations
 
     // Selected side items (stored as JSON: {id, quantity} pairs)

@@ -1,22 +1,23 @@
 using Xunit;
 using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Features.FidelityPoints.Services;
-using RestaurantSystem.Infrastructure.Data;
+using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.Domain.Entities;
 using Moq;
-using RestaurantSystem.Api.Common.Interfaces;
+using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.IntegrationTests.Infrastructure;
 
 namespace RestaurantSystem.IntegrationTests.Features.FidelityPoints;
 
 [Collection("Database")]
 public class PointEarningRuleServiceTests : IAsyncLifetime
 {
-    private readonly TestDatabaseFixture _fixture;
+    private readonly DatabaseFixture _fixture;
     private ApplicationDbContext _context = null!;
     private PointEarningRuleService _service = null!;
     private Mock<ICurrentUserService> _currentUserServiceMock = null!;
 
-    public PointEarningRuleServiceTests(TestDatabaseFixture fixture)
+    public PointEarningRuleServiceTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
     }
@@ -50,7 +51,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var inactiveRule = new PointEarningRule
@@ -62,7 +64,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = false,
             Priority = 2,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.AddRange(activeRule, inactiveRule);
@@ -88,7 +91,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 3,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var rule2 = new PointEarningRule
@@ -99,7 +103,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var rule3 = new PointEarningRule
@@ -110,7 +115,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 75,
             IsActive = true,
             Priority = 2,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.AddRange(rule1, rule2, rule3);
@@ -139,7 +145,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.Add(rule);
@@ -166,7 +173,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 500,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.Add(rule);
@@ -193,7 +201,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 2,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var rule2 = new PointEarningRule
@@ -205,7 +214,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.AddRange(rule1, rule2);
@@ -232,7 +242,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 200,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -257,7 +268,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.Add(rule);
@@ -290,7 +302,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.Add(rule);
@@ -317,7 +330,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.Add(existingRule);
@@ -332,7 +346,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = true,
             Priority = 2,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -355,7 +370,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.Add(existingRule);
@@ -370,7 +386,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = true,
             Priority = 2,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -392,7 +409,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 50,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var activeRule2 = new PointEarningRule
@@ -403,7 +421,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 100,
             IsActive = true,
             Priority = 2,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var inactiveRule = new PointEarningRule
@@ -414,7 +433,8 @@ public class PointEarningRuleServiceTests : IAsyncLifetime
             PointsAwarded = 150,
             IsActive = false,
             Priority = 3,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.PointEarningRules.AddRange(activeRule1, activeRule2, inactiveRule);

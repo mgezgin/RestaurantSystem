@@ -117,8 +117,10 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                         Name = di.Name,
                         IsOptional = di.IsOptional,
                         Price = di.Price,
+                        IsIncludedInBasePrice = di.IsIncludedInBasePrice,
                         IsActive = di.IsActive,
                         DisplayOrder = di.DisplayOrder,
+                        MaxQuantity = di.MaxQuantity,
                         Content = di.Descriptions.ToDictionary(
                             d => d.LanguageCode,
                             d => new ProductIngredientContentDto

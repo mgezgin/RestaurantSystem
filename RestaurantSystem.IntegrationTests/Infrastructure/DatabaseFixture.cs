@@ -53,6 +53,19 @@ public class DatabaseFixture : IAsyncLifetime
         });
     }
 
+    public ApplicationDbContext CreateContext()
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(ConnectionString);
+        dataSourceBuilder.EnableDynamicJson();
+        var dataSource = dataSourceBuilder.Build();
+
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(dataSource)
+            .Options;
+
+        return new ApplicationDbContext(options);
+    }
+
     public async Task ResetDatabaseAsync()
     {
         await using var connection = new NpgsqlConnection(ConnectionString);

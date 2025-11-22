@@ -212,8 +212,10 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     Name = ingredientDto.Name,
                     IsOptional = ingredientDto.IsOptional,
                     Price = ingredientDto.Price,
+                    IsIncludedInBasePrice = ingredientDto.IsIncludedInBasePrice,
                     IsActive = ingredientDto.IsActive,
                     DisplayOrder = ingredientDto.DisplayOrder,
+                    MaxQuantity = ingredientDto.MaxQuantity,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };

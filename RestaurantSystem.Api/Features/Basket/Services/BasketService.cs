@@ -206,15 +206,59 @@ public class BasketService : IBasketService
                 var unitPrice = product.BasePrice + (variation?.PriceModifier ?? 0);
 
                 // Calculate customization price from optional ingredients
+                // Two scenarios:
+                // 1. Ingredient is included in base price (IsIncludedInBasePrice = true):
+                //    - Base price includes 1 quantity of this ingredient
+                //    - Qty 0 (deselected): deduct price * 1
+                //    - Qty 1 (selected): no change (already in base)
+                //    - Qty 2+: add price * (qty - 1) for extra pieces
+                // 2. Ingredient is NOT included in base price (IsIncludedInBasePrice = false):
+                //    - If selected by user: add price * qty
+                //    - If NOT selected by user: no change
                 decimal customizationPrice = 0;
-                if (item.SelectedIngredients != null && item.SelectedIngredients.Count > 0 && product.DetailedIngredients != null)
+                if (product.DetailedIngredients != null)
                 {
-                    foreach (var ingredientId in item.SelectedIngredients)
+                    var selectedIngredientIds = item.SelectedIngredients ?? new List<Guid>();
+
+                    foreach (var ingredient in product.DetailedIngredients.Where(i => i.IsOptional && i.IsActive))
                     {
-                        var ingredient = product.DetailedIngredients.FirstOrDefault(i => i.Id == ingredientId && i.IsOptional && i.IsActive);
-                        if (ingredient != null)
+                        bool isSelected = selectedIngredientIds.Contains(ingredient.Id);
+                        int quantity = 1;
+
+                        if (item.IngredientQuantities != null && item.IngredientQuantities.TryGetValue(ingredient.Id, out var qty))
                         {
-                            customizationPrice += ingredient.Price;
+                            quantity = qty;
+                        }
+
+                        // Validate max quantity
+                        if (quantity > ingredient.MaxQuantity)
+                        {
+                            quantity = ingredient.MaxQuantity;
+                        }
+
+                        if (ingredient.IsIncludedInBasePrice)
+                        {
+                            // Ingredient price is included in base price for 1 quantity
+                            if (!isSelected)
+                            {
+                                // Deselected: deduct the included quantity (1)
+                                customizationPrice -= ingredient.Price;
+                            }
+                            else if (quantity > 1)
+                            {
+                                // Selected with more than 1: add extra quantities beyond the free one
+                                customizationPrice += ingredient.Price * (quantity - 1);
+                            }
+                            // quantity == 1: already in base price, no change
+                        }
+                        else
+                        {
+                            // Regular optional ingredient (not included in base)
+                            // Add price if user selected it
+                            if (isSelected)
+                            {
+                                customizationPrice += ingredient.Price * quantity;
+                            }
                         }
                     }
                 }
@@ -244,6 +288,13 @@ public class BasketService : IBasketService
                     selectedSideItemsJson = JsonSerializer.Serialize(item.SelectedSideItems);
                 }
 
+                // Serialize ingredient quantities to JSON
+                string? ingredientQuantitiesJson = null;
+                if (item.IngredientQuantities != null && item.IngredientQuantities.Count > 0)
+                {
+                    ingredientQuantitiesJson = JsonSerializer.Serialize(item.IngredientQuantities);
+                }
+
                 // Create new basket item
                 var basketItem = new BasketItem
                 {
@@ -257,6 +308,7 @@ public class BasketService : IBasketService
                     SelectedIngredients = item.SelectedIngredients,
                     ExcludedIngredients = item.ExcludedIngredients,
                     AddedIngredients = item.AddedIngredients,
+                    IngredientQuantitiesJson = ingredientQuantitiesJson,
                     CustomizationPrice = customizationPrice,
                     SelectedSideItemsJson = selectedSideItemsJson,
                     CreatedAt = DateTime.UtcNow,
@@ -688,6 +740,20 @@ public class BasketService : IBasketService
                     }
                 }
 
+                // Deserialize ingredient quantities
+                Dictionary<Guid, int>? ingredientQuantities = null;
+                if (!string.IsNullOrEmpty(item.IngredientQuantitiesJson))
+                {
+                    try
+                    {
+                        ingredientQuantities = JsonSerializer.Deserialize<Dictionary<Guid, int>>(item.IngredientQuantitiesJson);
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize ingredient quantities JSON for basket item {BasketItemId}", item.Id);
+                    }
+                }
+
                 return new BasketItemDto
                 {
                     Id = item.Id,
@@ -705,6 +771,7 @@ public class BasketService : IBasketService
                     SelectedIngredients = item.SelectedIngredients,
                     ExcludedIngredients = item.ExcludedIngredients,
                     AddedIngredients = item.AddedIngredients,
+                    IngredientQuantities = ingredientQuantities,
                     CustomizationPrice = item.CustomizationPrice,
                     SelectedIngredientNames = selectedNames,
                     ExcludedIngredientNames = excludedNames,

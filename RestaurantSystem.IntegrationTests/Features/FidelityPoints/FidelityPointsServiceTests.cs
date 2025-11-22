@@ -3,23 +3,24 @@ using Xunit;
 using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Features.FidelityPoints.Services;
 using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
-using RestaurantSystem.Infrastructure.Data;
+using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.Domain.Entities;
-using RestaurantSystem.Api.Common.Interfaces;
+using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.IntegrationTests.Infrastructure;
 
 namespace RestaurantSystem.IntegrationTests.Features.FidelityPoints;
 
 [Collection("Database")]
 public class FidelityPointsServiceTests : IAsyncLifetime
 {
-    private readonly TestDatabaseFixture _fixture;
+    private readonly DatabaseFixture _fixture;
     private ApplicationDbContext _context = null!;
     private FidelityPointsService _service = null!;
     private Mock<IPointEarningRuleService> _ruleServiceMock = null!;
     private Mock<ICurrentUserService> _currentUserServiceMock = null!;
     private Guid _testUserId;
 
-    public FidelityPointsServiceTests(TestDatabaseFixture fixture)
+    public FidelityPointsServiceTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
     }
@@ -35,8 +36,8 @@ public class FidelityPointsServiceTests : IAsyncLifetime
 
         _service = new FidelityPointsService(
             _context,
-            _ruleServiceMock.Object,
-            _currentUserServiceMock.Object
+            _currentUserServiceMock.Object,
+            _ruleServiceMock.Object
         );
 
         await Task.CompletedTask;
@@ -62,7 +63,8 @@ public class FidelityPointsServiceTests : IAsyncLifetime
             PointsAwarded = expectedPoints,
             IsActive = true,
             Priority = 1,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _ruleServiceMock

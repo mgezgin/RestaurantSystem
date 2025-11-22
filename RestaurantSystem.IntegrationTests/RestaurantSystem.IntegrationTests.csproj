@@ -17,6 +17,7 @@
 		<PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
 		<PackageReference Include="FluentAssertions" Version="7.0.0" />
 		<PackageReference Include="Respawn" Version="6.2.1" />
+		<PackageReference Include="Moq" Version="4.20.70" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -24,6 +25,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\RestaurantSystem.Api\RestaurantSystem.Api.csproj" />
+		<ProjectReference Include="..\RestaurantSystem.Infrastructure\RestaurantSystem.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

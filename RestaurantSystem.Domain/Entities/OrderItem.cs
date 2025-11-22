@@ -14,6 +14,7 @@ public class OrderItem : Entity
     public decimal UnitPrice { get; set; } // Price at order time
     public decimal ItemTotal { get; set; }
     public string? SpecialInstructions { get; set; }
+    public string? IngredientQuantitiesJson { get; set; } // JSON: { ingredientId: quantity }
 
     // Navigation properties
     public virtual Order Order { get; set; } = null!;

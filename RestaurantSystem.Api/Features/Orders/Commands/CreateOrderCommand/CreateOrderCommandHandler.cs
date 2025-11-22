@@ -10,6 +10,7 @@ using RestaurantSystem.Api.Features.Settings.Interfaces;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Persistence;
+using System.Text.Json;
 
 namespace RestaurantSystem.Api.Features.Orders.Commands.CreateOrderCommand;
 
@@ -128,6 +129,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         UnitPrice = unitPrice,
                         ItemTotal = unitPrice * itemDto.Quantity,
                         SpecialInstructions = itemDto.SpecialInstructions,
+                        IngredientQuantitiesJson = itemDto.IngredientQuantities != null ? JsonSerializer.Serialize(itemDto.IngredientQuantities) : null,
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                     };
@@ -175,6 +177,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         UnitPrice = unitPrice,
                         ItemTotal = unitPrice * itemDto.Quantity,
                         SpecialInstructions = itemDto.SpecialInstructions,
+                        IngredientQuantitiesJson = itemDto.IngredientQuantities != null ? JsonSerializer.Serialize(itemDto.IngredientQuantities) : null,
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                     };

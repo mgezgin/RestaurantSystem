@@ -1,23 +1,24 @@
 using Xunit;
 using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Features.FidelityPoints.Services;
-using RestaurantSystem.Infrastructure.Data;
+using RestaurantSystem.Infrastructure.Persistence;
 using RestaurantSystem.Domain.Entities;
 using Moq;
-using RestaurantSystem.Api.Common.Interfaces;
+using RestaurantSystem.Api.Common.Services.Interfaces;
+using RestaurantSystem.IntegrationTests.Infrastructure;
 
 namespace RestaurantSystem.IntegrationTests.Features.FidelityPoints;
 
 [Collection("Database")]
 public class CustomerDiscountServiceTests : IAsyncLifetime
 {
-    private readonly TestDatabaseFixture _fixture;
+    private readonly DatabaseFixture _fixture;
     private ApplicationDbContext _context = null!;
     private CustomerDiscountService _service = null!;
     private Mock<ICurrentUserService> _currentUserServiceMock = null!;
     private Guid _testUserId;
 
-    public CustomerDiscountServiceTests(TestDatabaseFixture fixture)
+    public CustomerDiscountServiceTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
     }
@@ -56,7 +57,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             IsActive = true,
             ValidFrom = now.AddDays(-1),
             ValidUntil = now.AddDays(30),
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         var inactiveDiscount = new CustomerDiscountRule
@@ -67,7 +69,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 15m,
             IsActive = false,
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         _context.CustomerDiscountRules.AddRange(activeDiscount, inactiveDiscount);
@@ -96,7 +99,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 10m,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         var discount2 = new CustomerDiscountRule
@@ -107,7 +111,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 20m,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.CustomerDiscountRules.AddRange(discount1, discount2);
@@ -139,7 +144,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = discountValue,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -166,7 +172,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.FixedAmount,
             DiscountValue = fixedDiscount,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -190,7 +197,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             IsActive = true,
             UsageCount = 0,
             MaxUsageCount = 5,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.CustomerDiscountRules.Add(discount);
@@ -215,7 +223,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 15m,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -240,7 +249,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 10m,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.CustomerDiscountRules.Add(discount);
@@ -272,7 +282,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 10m,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         _context.CustomerDiscountRules.Add(discount);
@@ -304,7 +315,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             ValidUntil = now.AddDays(1),
             MinOrderAmount = 20m,
             MaxOrderAmount = 200m,
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -329,7 +341,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             IsActive = true,
             ValidFrom = now.AddDays(-30),
             ValidUntil = now.AddDays(-1),
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -352,7 +365,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountValue = 10m,
             IsActive = true,
             MinOrderAmount = 50m,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -376,7 +390,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             IsActive = true,
             MaxUsageCount = 5,
             UsageCount = 5,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "TestUser"
         };
 
         // Act
@@ -402,7 +417,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             IsActive = true,
             ValidFrom = now.AddDays(-1),
             ValidUntil = now.AddDays(30),
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         var active2 = new CustomerDiscountRule
@@ -413,7 +429,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.FixedAmount,
             DiscountValue = 5m,
             IsActive = true,
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         var inactive = new CustomerDiscountRule
@@ -424,7 +441,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             DiscountType = DiscountType.Percentage,
             DiscountValue = 15m,
             IsActive = false,
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         var expired = new CustomerDiscountRule
@@ -437,7 +455,8 @@ public class CustomerDiscountServiceTests : IAsyncLifetime
             IsActive = true,
             ValidFrom = now.AddDays(-30),
             ValidUntil = now.AddDays(-1),
-            CreatedAt = now
+            CreatedAt = now,
+            CreatedBy = "TestUser"
         };
 
         _context.CustomerDiscountRules.AddRange(active1, active2, inactive, expired);

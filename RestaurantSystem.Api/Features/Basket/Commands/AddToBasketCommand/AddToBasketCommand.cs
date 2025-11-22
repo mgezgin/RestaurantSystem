@@ -17,6 +17,7 @@ public record AddToBasketCommand(
     List<Guid>? SelectedIngredients,
     List<Guid>? ExcludedIngredients,
     List<Guid>? AddedIngredients,
+    Dictionary<Guid, int>? IngredientQuantities,
     List<SelectedSideItemDto>? SelectedSideItems
 ) : ICommand<ApiResponse<BasketDto>>;
 
@@ -51,6 +52,7 @@ public class AddToBasketCommandHandler : ICommandHandler<AddToBasketCommand, Api
                 SelectedIngredients = command.SelectedIngredients,
                 ExcludedIngredients = command.ExcludedIngredients,
                 AddedIngredients = command.AddedIngredients,
+                IngredientQuantities = command.IngredientQuantities,
                 SelectedSideItems = command.SelectedSideItems,
             };
 

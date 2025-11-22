@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -12,9 +13,11 @@ using RestaurantSystem.Infrastructure.Persistence;
 namespace RestaurantSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251122184007_UpdatePendingModelChanges")]
+    partial class UpdatePendingModelChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2007,10 +2010,6 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
-
-                    b.Property<bool>("IsIncludedInBasePrice")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_included_in_base_price");
 
                     b.Property<bool>("IsOptional")
                         .HasColumnType("boolean")
