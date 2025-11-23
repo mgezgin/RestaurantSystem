@@ -125,4 +125,26 @@ public interface IEmailService
         string customerEmail, string customerPhone, string orderType, decimal total,
         IEnumerable<(string name, int quantity, decimal price)> items, string? specialInstructions = null,
         string? deliveryAddress = null);
+
+    /// <summary>
+    /// Sends group membership confirmation email with QR code
+    /// </summary>
+    /// <param name="toEmail">Recipient email address</param>
+    /// <param name="userName">User's name</param>
+    /// <param name="groupName">Group name</param>
+    /// <param name="groupDescription">Group description</param>
+    /// <param name="qrCodeImage">QR code image as byte array</param>
+    /// <param name="qrCodeData">QR code data string</param>
+    /// <param name="expiryDate">Membership expiry date (optional)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task representing the async operation</returns>
+    Task SendMembershipConfirmationEmailAsync(
+        string toEmail,
+        string userName,
+        string groupName,
+        string groupDescription,
+        byte[] qrCodeImage,
+        string qrCodeData,
+        DateTime? expiryDate = null,
+        CancellationToken cancellationToken = default);
 }

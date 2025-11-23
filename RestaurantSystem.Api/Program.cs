@@ -21,6 +21,8 @@ using RestaurantSystem.Api.Features.FidelityPoints.Services;
 using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Api.Features.Settings.Interfaces;
 using RestaurantSystem.Api.Features.Settings.Services;
+using RestaurantSystem.Api.Features.Groups.Interfaces;
+using RestaurantSystem.Api.Features.Groups.Services;
 using RestaurantSystem.Api.Settings;
 using RestaurantSystem.Domain.Entities;
 using RestaurantSystem.Infrastructure.Extensions;
@@ -229,6 +231,9 @@ builder.Services.AddScoped<IPointEarningRuleService, PointEarningRuleService>();
 builder.Services.AddScoped<IFidelityPointsService, FidelityPointsService>();
 builder.Services.AddScoped<ICustomerDiscountService, CustomerDiscountService>();
 builder.Services.AddScoped<ITaxConfigurationService, TaxConfigurationService>();
+builder.Services.AddScoped<IOrderTypeConfigurationService, OrderTypeConfigurationService>();
+builder.Services.AddScoped<IQRCodeService, QRCodeService>();
+builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 builder.Services.AddScoped<LoginEventHandler>();
 builder.Services.AddHostedService<BasketCleanupService>();
 

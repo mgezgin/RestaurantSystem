@@ -56,6 +56,14 @@ namespace RestaurantSystem.Infrastructure.Persistence
         // Tax Configuration
         public DbSet<TaxConfiguration> TaxConfigurations { get; set; }
 
+        // Order Type Configuration
+        public DbSet<OrderTypeConfiguration> OrderTypeConfigurations { get; set; }
+
+        // User Groups & Discounts
+        public DbSet<UserGroup> UserGroups { get; set; }
+        public DbSet<GroupMembership> GroupMemberships { get; set; }
+        public DbSet<GroupDiscount> GroupDiscounts { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
