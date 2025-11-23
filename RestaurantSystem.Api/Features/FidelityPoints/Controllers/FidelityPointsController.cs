@@ -133,4 +133,40 @@ public class FidelityPointsController : ControllerBase
         var points = _fidelityPointsService.CalculatePointsForDiscount(discountAmount);
         return Ok(ApiResponse<int>.SuccessWithData(points));
     }
+    /// <summary>
+    /// Adjust user's fidelity points (Admin only)
+    /// </summary>
+    [HttpPost("adjust")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<FidelityPointsTransactionDto>), 200)]
+    public async Task<IActionResult> AdjustPoints([FromBody] AdjustPointsDto dto, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var transaction = await _fidelityPointsService.AdjustPointsAsync(
+                dto.UserId,
+                dto.Points,
+                dto.Reason,
+                cancellationToken);
+
+            var transactionDto = new FidelityPointsTransactionDto
+            {
+                Id = transaction.Id,
+                UserId = transaction.UserId,
+                OrderId = transaction.OrderId,
+                TransactionType = transaction.TransactionType.ToString(),
+                Points = transaction.Points,
+                OrderTotal = transaction.OrderTotal,
+                Description = transaction.Description,
+                CreatedAt = transaction.CreatedAt
+            };
+
+            return Ok(ApiResponse<FidelityPointsTransactionDto>.SuccessWithData(transactionDto, "Points adjusted successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adjusting points for user {UserId}", dto.UserId);
+            return BadRequest(ApiResponse<object>.Failure(ex.Message));
+        }
+    }
 }

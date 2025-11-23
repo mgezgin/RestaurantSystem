@@ -10,6 +10,8 @@ using RestaurantSystem.Infrastructure.Persistence;
 
 namespace RestaurantSystem.Api.Features.Orders.Commands.AddPaymentToOrderCommand;
 
+using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
+
 public record AddPaymentToOrderCommand : ICommand<ApiResponse<OrderDto>>
 {
     public Guid OrderId { get; set; }
@@ -29,16 +31,19 @@ public class AddPaymentToOrderCommandHandler : ICommandHandler<AddPaymentToOrder
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<AddPaymentToOrderCommandHandler> _logger;
     private readonly IOrderMappingService _mappingService;
+    private readonly IFidelityPointsService _fidelityPointsService;
 
     public AddPaymentToOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
         IOrderMappingService mappingService,
+        IFidelityPointsService fidelityPointsService,
         ILogger<AddPaymentToOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
         _mappingService = mappingService;
+        _fidelityPointsService = fidelityPointsService;
         _logger = logger;
     }
 
@@ -161,6 +166,35 @@ public class AddPaymentToOrderCommandHandler : ICommandHandler<AddPaymentToOrder
 
         _logger.LogInformation("Payment {PaymentId} added to order {OrderNumber} by user {UserId}",
             payment.Id, order.OrderNumber, _currentUserService.UserId);
+
+        // Check if we should award fidelity points now that payment is updated
+        if (order.UserId.HasValue && order.FidelityPointsEarned > 0 &&
+           (order.PaymentStatus == PaymentStatus.Completed || order.PaymentStatus == PaymentStatus.Overpaid))
+        {
+            // Check if points already awarded
+            var alreadyAwarded = await _context.FidelityPointsTransactions
+                .AnyAsync(t => t.OrderId == order.Id && t.TransactionType == TransactionType.Earned, cancellationToken);
+
+            if (!alreadyAwarded)
+            {
+                try
+                {
+                    await _fidelityPointsService.AwardPointsAsync(
+                        order.UserId.Value,
+                        order.Id,
+                        order.FidelityPointsEarned,
+                        order.SubTotal,
+                        cancellationToken);
+                    
+                    _logger.LogInformation("Awarded {Points} fidelity points to user {UserId} for order {OrderNumber} after payment completion",
+                        order.FidelityPointsEarned, order.UserId, order.OrderNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to award fidelity points for order {OrderNumber} after payment", order.OrderNumber);
+                }
+            }
+        }
 
         // Return the updated order so frontend gets current payment status
         var orderDto = await _mappingService.MapToOrderDtoAsync(order, cancellationToken);

@@ -33,6 +33,7 @@ public class OrderMappingService : IOrderMappingService
             DeliveryFee = order.DeliveryFee,
             Discount = order.Discount,
             DiscountPercentage = order.DiscountPercentage,
+            CustomerDiscountAmount = order.CustomerDiscountAmount,
             Tip = order.Tip,
             Total = order.Total,
             TotalPaid = order.TotalPaid,

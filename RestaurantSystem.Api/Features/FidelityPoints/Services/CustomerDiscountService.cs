@@ -41,19 +41,115 @@ public class CustomerDiscountService : ICustomerDiscountService
         CancellationToken cancellationToken = default)
     {
         var activeDiscounts = await GetActiveDiscountsForUserAsync(userId, cancellationToken);
-
-        // Filter by order amount constraints
         var applicableDiscounts = activeDiscounts
             .Where(d => IsDiscountValid(d, orderAmount))
             .ToList();
 
-        if (!applicableDiscounts.Any())
-            return null;
-
-        // Find the discount that gives the maximum discount amount
-        return applicableDiscounts
+        // Also fetch applicable group discounts
+        var groupDiscounts = await GetApplicableGroupDiscountsAsync(userId, orderAmount, cancellationToken);
+        
+        // Combine and find best
+        var bestIndividual = applicableDiscounts
             .OrderByDescending(d => CalculateDiscountAmount(d, orderAmount))
             .FirstOrDefault();
+
+        var bestGroup = groupDiscounts
+            .OrderByDescending(d => CalculateGroupDiscountAmount(d, orderAmount))
+            .FirstOrDefault();
+
+        if (bestIndividual == null && bestGroup == null)
+            return null;
+
+        if (bestIndividual == null)
+            return MapGroupDiscountToRule(bestGroup!, orderAmount);
+
+        if (bestGroup == null)
+            return bestIndividual;
+
+        var individualAmount = CalculateDiscountAmount(bestIndividual, orderAmount);
+        var groupAmount = CalculateGroupDiscountAmount(bestGroup, orderAmount);
+
+        return individualAmount >= groupAmount 
+            ? bestIndividual 
+            : MapGroupDiscountToRule(bestGroup, orderAmount);
+    }
+
+    private async Task<List<GroupDiscount>> GetApplicableGroupDiscountsAsync(
+        Guid userId,
+        decimal orderAmount,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+
+        // Get user's active group memberships
+        var userGroupIds = await _context.GroupMemberships
+            .Where(m => m.UserId == userId && m.IsActive && 
+                       (m.ExpiresAt == null || m.ExpiresAt > now))
+            .Select(m => m.GroupId)
+            .ToListAsync(cancellationToken);
+
+        if (!userGroupIds.Any())
+            return new List<GroupDiscount>();
+
+        // Get active discounts for these groups
+        var groupDiscounts = await _context.GroupDiscounts
+            .Include(gd => gd.Group)
+            .Where(gd => userGroupIds.Contains(gd.GroupId) && 
+                        gd.IsActive &&
+                        gd.Group.IsActive &&
+                        (gd.Group.ValidFrom == null || gd.Group.ValidFrom <= now) &&
+                        (gd.Group.ValidUntil == null || gd.Group.ValidUntil >= now))
+            .ToListAsync(cancellationToken);
+
+        // Filter by order amount
+        return groupDiscounts
+            .Where(gd => (!gd.MinimumOrderAmount.HasValue || orderAmount >= gd.MinimumOrderAmount.Value))
+            .ToList();
+    }
+
+    private decimal CalculateGroupDiscountAmount(GroupDiscount discount, decimal orderAmount)
+    {
+        decimal amount;
+        if (discount.Type == DiscountType.Percentage)
+        {
+            amount = orderAmount * (discount.Value / 100);
+        }
+        else
+        {
+            amount = discount.Value;
+        }
+
+        // Only cap if MaximumDiscountAmount is set and greater than 0
+        // Treating 0 as "no limit" to handle potential data entry errors where 0 was used instead of null
+        if (discount.MaximumDiscountAmount.HasValue && 
+            discount.MaximumDiscountAmount.Value > 0 && 
+            amount > discount.MaximumDiscountAmount.Value)
+        {
+            amount = discount.MaximumDiscountAmount.Value;
+        }
+
+        return amount;
+    }
+
+    private CustomerDiscountRule MapGroupDiscountToRule(GroupDiscount groupDiscount, decimal orderAmount)
+    {
+        // Calculate effective amount to handle caps
+        var effectiveAmount = CalculateGroupDiscountAmount(groupDiscount, orderAmount);
+
+        return new CustomerDiscountRule
+        {
+            Id = groupDiscount.Id,
+            Name = $"{groupDiscount.Name} ({groupDiscount.Group.Name})",
+            // We map it as a FixedAmount with the calculated effective value
+            // This ensures the BasketService applies the exact capped amount
+            DiscountType = DiscountType.FixedAmount,
+            DiscountValue = effectiveAmount,
+            MinOrderAmount = groupDiscount.MinimumOrderAmount,
+            IsActive = true,
+            UserId = Guid.Empty, // Placeholder
+            CreatedBy = "System",
+            CreatedAt = DateTime.UtcNow
+        };
     }
 
     public decimal CalculateDiscountAmount(CustomerDiscountRule rule, decimal orderAmount)

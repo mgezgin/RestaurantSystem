@@ -655,6 +655,8 @@ public class BasketService : IBasketService
     {
         // Calculate customer discount if user is logged in
         decimal customerDiscountAmount = 0;
+        string? customerDiscountName = null;
+
         if (basket.UserId.HasValue && basket.UserId.Value != Guid.Empty)
         {
             var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
@@ -665,6 +667,7 @@ public class BasketService : IBasketService
             if (customerDiscount != null)
             {
                 customerDiscountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, basket.SubTotal);
+                customerDiscountName = customerDiscount.Name;
             }
         }
 
@@ -678,6 +681,7 @@ public class BasketService : IBasketService
             DeliveryFee = basket.DeliveryFee,
             Discount = basket.Discount,
             CustomerDiscount = customerDiscountAmount,
+            CustomerDiscountName = customerDiscountName,
             Total = basket.Total,
             PromoCode = basket.PromoCode,
             TotalItems = basket.Items.Sum(i => i.Quantity),

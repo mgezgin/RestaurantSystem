@@ -127,7 +127,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         VariationName = variationName,
                         Quantity = itemDto.Quantity,
                         UnitPrice = unitPrice,
-                        ItemTotal = unitPrice * itemDto.Quantity,
+                        ItemTotal = (unitPrice * itemDto.Quantity) + itemDto.CustomizationPrice,
                         SpecialInstructions = itemDto.SpecialInstructions,
                         IngredientQuantitiesJson = itemDto.IngredientQuantities != null ? JsonSerializer.Serialize(itemDto.IngredientQuantities) : null,
                         CreatedAt = DateTime.UtcNow,
@@ -149,21 +149,41 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         return ApiResponse<OrderDto>.Failure($"Product {itemDto.ProductId} not found");
                     }
 
-                    decimal unitPrice = product.BasePrice;
+                    // Use the unitPrice from the DTO if provided (from basket, includes customizations)
+                    // Otherwise calculate from product base price and variation
+                    decimal unitPrice;
                     string? variationName = null;
 
-                    if (itemDto.ProductVariationId.HasValue)
+                    if (itemDto.UnitPrice > 0)
                     {
-                        var variation = product.Variations
-                            .FirstOrDefault(v => v.Id == itemDto.ProductVariationId.Value && !v.IsDeleted);
-
-                        if (variation == null)
+                        // Use the price from basket which includes customizations
+                        unitPrice = itemDto.UnitPrice;
+                        
+                        if (itemDto.ProductVariationId.HasValue)
                         {
-                            return ApiResponse<OrderDto>.Failure($"Product variation {itemDto.ProductVariationId} not found");
+                            var variation = product.Variations
+                                .FirstOrDefault(v => v.Id == itemDto.ProductVariationId.Value && !v.IsDeleted);
+                            variationName = variation?.Name;
                         }
+                    }
+                    else
+                    {
+                        // Fallback: calculate from product
+                        unitPrice = product.BasePrice;
+                        
+                        if (itemDto.ProductVariationId.HasValue)
+                        {
+                            var variation = product.Variations
+                                .FirstOrDefault(v => v.Id == itemDto.ProductVariationId.Value && !v.IsDeleted);
 
-                        unitPrice += variation.PriceModifier;
-                        variationName = variation.Name;
+                            if (variation == null)
+                            {
+                                return ApiResponse<OrderDto>.Failure($"Product variation {itemDto.ProductVariationId} not found");
+                            }
+
+                            unitPrice += variation.PriceModifier;
+                            variationName = variation.Name;
+                        }
                     }
 
                     var orderItem = new OrderItem
@@ -175,7 +195,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                         VariationName = variationName,
                         Quantity = itemDto.Quantity,
                         UnitPrice = unitPrice,
-                        ItemTotal = unitPrice * itemDto.Quantity,
+                        ItemTotal = (unitPrice * itemDto.Quantity) + itemDto.CustomizationPrice,
                         SpecialInstructions = itemDto.SpecialInstructions,
                         IngredientQuantitiesJson = itemDto.IngredientQuantities != null ? JsonSerializer.Serialize(itemDto.IngredientQuantities) : null,
                         CreatedAt = DateTime.UtcNow,
@@ -187,64 +207,83 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 }
             }
 
-            // REFACTORED TAX FLOW: Tax is extracted from item prices for display only
-            // It does NOT affect the final customer payment
-            // Example: Product 16.90 → Tax extracted 0.44 → SubTotal shown 16.46 → Customer pays 16.90
-
             // itemsTotal = sum of all item prices (what customer pays for items)
             decimal itemsTotal = subTotal;
 
-            // Calculate tax on items total - this is for display/bills only
-            order.Tax = await CalculateTax(itemsTotal, command.Type, cancellationToken);
-
-            // SubTotal = items total minus the extracted tax (for display purposes)
-            order.SubTotal = itemsTotal - order.Tax;
-
-            // DeliveryFee is added to final price
-            order.DeliveryFee = command.Type == OrderType.Delivery ? CalculateDeliveryFee() : 0;
-
-            // Apply user discount (calculated on items total, before tax extraction)
-            if (command.HasUserLimitDiscount && itemsTotal >= command.UserLimitAmount)
+            // If basket values are provided, use them directly to ensure consistency
+            // Otherwise, calculate them as before
+            if (command.BasketSubTotal.HasValue && command.BasketTax.HasValue && 
+                command.BasketTotal.HasValue)
             {
-                var user = await _context.Users.FindAsync(userId);
-                if (user != null && user.IsDiscountActive)
+                // Use pre-calculated basket values
+                order.SubTotal = command.BasketSubTotal.Value;
+                order.Tax = command.BasketTax.Value;
+                order.Discount = command.BasketDiscount ?? 0;
+                order.CustomerDiscountAmount = command.BasketCustomerDiscount ?? 0;
+                
+                _logger.LogInformation("Using pre-calculated basket values for order: SubTotal={SubTotal}, Tax={Tax}, Discount={Discount}, CustomerDiscount={CustomerDiscount}",
+                    order.SubTotal, order.Tax, order.Discount, order.CustomerDiscountAmount);
+            }
+            else
+            {
+                // Calculate values as before (legacy path)
+                // REFACTORED TAX FLOW: Tax is extracted from item prices for display only
+                // It does NOT affect the final customer payment
+                // Example: Product 16.90 → Tax extracted 0.44 → SubTotal shown 16.46 → Customer pays 16.90
+
+                // Calculate tax on items total - this is for display/bills only
+                order.Tax = await CalculateTax(itemsTotal, command.Type, cancellationToken);
+
+                // SubTotal = items total minus the extracted tax (for display purposes)
+                order.SubTotal = itemsTotal - order.Tax;
+
+                // DeliveryFee is added to final price
+                order.DeliveryFee = command.Type == OrderType.Delivery ? CalculateDeliveryFee() : 0;
+
+                // Apply user discount (calculated on items total, before tax extraction)
+                if (command.HasUserLimitDiscount && itemsTotal >= command.UserLimitAmount)
                 {
-                    order.DiscountPercentage = user.DiscountPercentage;
-                    // Discount applies to items total (before tax extraction)
-                    order.Discount = itemsTotal * (user.DiscountPercentage / 100);
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null && user.IsDiscountActive)
+                    {
+                        order.DiscountPercentage = user.DiscountPercentage;
+                        // Discount applies to items total (before tax extraction)
+                        order.Discount = itemsTotal * (user.DiscountPercentage / 100);
+                    }
+                }
+
+                // Apply customer-specific discount if available
+                if (userId.HasValue)
+                {
+                    var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
+                        userId.Value,
+                        itemsTotal,
+                        cancellationToken);
+
+                    if (customerDiscount != null)
+                    {
+                        // Discount calculated on items total (before tax extraction)
+                        var discountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, itemsTotal);
+                        order.CustomerDiscountAmount = discountAmount;
+
+                        // Only apply usage tracking for individual customer discounts, not group discounts
+                        // Group discounts are mapped with temporary IDs that don't exist in CustomerDiscountRules
+                        var isIndividualDiscount = await _context.CustomerDiscountRules
+                            .AnyAsync(d => d.Id == customerDiscount.Id, cancellationToken);
+
+                        if (isIndividualDiscount)
+                        {
+                            // Only set the FK reference for individual discounts to avoid constraint violation
+                            order.CustomerDiscountRuleId = customerDiscount.Id;
+                            await _customerDiscountService.ApplyDiscountAsync(customerDiscount.Id, cancellationToken);
+                        }
+
+                        _logger.LogInformation("Applied customer discount {DiscountName} of ${Amount} to order",
+                            customerDiscount.Name, discountAmount);
+                    }
                 }
             }
-
-            // Apply customer-specific discount if available
-            if (userId.HasValue)
-            {
-                var customerDiscount = await _customerDiscountService.FindBestApplicableDiscountAsync(
-                    userId.Value,
-                    itemsTotal,
-                    cancellationToken);
-
-                if (customerDiscount != null)
-                {
-                    // Discount calculated on items total (before tax extraction)
-                    var discountAmount = _customerDiscountService.CalculateDiscountAmount(customerDiscount, itemsTotal);
-                    order.CustomerDiscountAmount = discountAmount;
-                    order.CustomerDiscountRuleId = customerDiscount.Id;
-
-                    // Apply the discount and increment usage count
-                    await _customerDiscountService.ApplyDiscountAsync(customerDiscount.Id, cancellationToken);
-
-                    _logger.LogInformation("Applied customer discount {DiscountName} of ${Amount} to order",
-                        customerDiscount.Name, discountAmount);
-                }
-            }
-
-            // Handle fidelity points redemption (if requested)
-            // Note: This would come from command.PointsToRedeem in a future update
-            // For now, we'll just calculate points to earn
-
-            // Calculate total: Items + DeliveryFee - Discounts - FidelityDiscount
-            // NOTE: Tax is NOT added to total - it's extracted from items and shown for display only
-            var totalBeforeFidelity = itemsTotal + order.DeliveryFee - order.Discount - order.CustomerDiscountAmount;
+            // Handle fidelity points redemption moved to after order save to prevent FK violation
 
             // Calculate fidelity points to earn for this order
             if (userId.HasValue)
@@ -255,10 +294,24 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 _logger.LogInformation("Order will earn {Points} fidelity points", pointsToEarn);
             }
 
-            // Calculate total and apply special rounding for discounted customers
-            var calculatedTotal = totalBeforeFidelity - order.FidelityPointsDiscount;
-            bool hasActiveDiscount = PriceRoundingUtility.HasActiveDiscount(order.CustomerDiscountAmount + order.Discount);
-            order.Total = PriceRoundingUtility.ApplySpecialRounding(calculatedTotal, hasActiveDiscount);
+            // Calculate total - use basket total if provided, otherwise calculate
+            if (command.BasketTotal.HasValue)
+            {
+                // Use pre-calculated basket total
+                order.Total = command.BasketTotal.Value;
+                _logger.LogInformation("Using pre-calculated basket total: {Total}", order.Total);
+            }
+            else
+            {
+                // Calculate total: Items + DeliveryFee - Discounts - FidelityDiscount
+                // NOTE: Tax is NOT added to total - it's extracted from items and shown for display only
+                var totalBeforeFidelity = itemsTotal + order.DeliveryFee - order.Discount - order.CustomerDiscountAmount;
+
+                // Calculate total and apply special rounding for discounted customers
+                var calculatedTotal = totalBeforeFidelity - order.FidelityPointsDiscount;
+                bool hasActiveDiscount = PriceRoundingUtility.HasActiveDiscount(order.CustomerDiscountAmount + order.Discount);
+                order.Total = PriceRoundingUtility.ApplySpecialRounding(calculatedTotal, hasActiveDiscount);
+            }
 
             // Process payments
             foreach (var paymentDto in command.Payments)
@@ -337,9 +390,41 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             }
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Handle fidelity points redemption (moved here to prevent FK violation)
+            // Now that the order is saved, we can safely create the transaction referencing it
+            if (userId.HasValue && command.PointsToRedeem.HasValue && command.PointsToRedeem.Value > 0)
+            {
+                try
+                {
+                    var (pointsTransaction, discountAmount) = await _fidelityPointsService.RedeemPointsAsync(
+                        userId.Value,
+                        order.Id, // Order now exists in DB
+                        command.PointsToRedeem.Value,
+                        cancellationToken);
+
+                    order.FidelityPointsRedeemed = command.PointsToRedeem.Value;
+                    order.FidelityPointsDiscount = discountAmount;
+
+                    _logger.LogInformation("Redeemed {Points} fidelity points for ${Discount} discount on order {OrderNumber}",
+                        command.PointsToRedeem.Value, discountAmount, order.OrderNumber);
+                        
+                    // Save the updates to the order
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to redeem fidelity points for order {OrderNumber}", order.OrderNumber);
+                    // Don't fail the order creation, just log the error
+                    // The user can contact support to resolve
+                }
+            }
             
             // Award fidelity points after successful order creation
-            if (userId.HasValue && order.FidelityPointsEarned > 0)
+            // Award fidelity points after successful order creation ONLY if payment is completed
+            // For pending payments (e.g. Cash), points will be awarded when payment is completed
+            if (userId.HasValue && order.FidelityPointsEarned > 0 && 
+               (order.PaymentStatus == PaymentStatus.Completed || order.PaymentStatus == PaymentStatus.Overpaid))
             {
                 try
                 {

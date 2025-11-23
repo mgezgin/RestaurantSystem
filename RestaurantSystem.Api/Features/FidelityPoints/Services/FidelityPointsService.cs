@@ -41,7 +41,9 @@ public class FidelityPointsService : IFidelityPointsService
         if (points <= 0)
             throw new ArgumentException("Points must be positive", nameof(points));
 
-        using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // Check if there's an existing transaction
+        var hasExistingTransaction = _context.Database.CurrentTransaction != null;
+        var transaction = hasExistingTransaction ? null : await _context.Database.BeginTransactionAsync(cancellationToken);
         
         try
         {
@@ -88,14 +90,28 @@ public class FidelityPointsService : IFidelityPointsService
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
 
             return pointsTransaction;
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
             throw;
+        }
+        finally
+        {
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 
@@ -108,7 +124,9 @@ public class FidelityPointsService : IFidelityPointsService
         if (pointsToRedeem <= 0)
             throw new ArgumentException("Points to redeem must be positive", nameof(pointsToRedeem));
 
-        using var dbTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // Check if there's an existing transaction
+        var hasExistingTransaction = _context.Database.CurrentTransaction != null;
+        var transaction = hasExistingTransaction ? null : await _context.Database.BeginTransactionAsync(cancellationToken);
         
         try
         {
@@ -147,14 +165,28 @@ public class FidelityPointsService : IFidelityPointsService
             balance.UpdatedBy = _currentUserService.UserId?.ToString() ?? userId.ToString();
 
             await _context.SaveChangesAsync(cancellationToken);
-            await dbTransaction.CommitAsync(cancellationToken);
+            
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
 
             return (pointsTransaction, discountAmount);
         }
         catch
         {
-            await dbTransaction.RollbackAsync(cancellationToken);
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
             throw;
+        }
+        finally
+        {
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 
@@ -189,7 +221,9 @@ public class FidelityPointsService : IFidelityPointsService
         if (string.IsNullOrWhiteSpace(reason))
             throw new ArgumentException("Reason is required for manual adjustments", nameof(reason));
 
-        using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // Check if there's an existing transaction
+        var hasExistingTransaction = _context.Database.CurrentTransaction != null;
+        var transaction = hasExistingTransaction ? null : await _context.Database.BeginTransactionAsync(cancellationToken);
         
         try
         {
@@ -240,14 +274,28 @@ public class FidelityPointsService : IFidelityPointsService
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
 
             return pointsTransaction;
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
             throw;
+        }
+        finally
+        {
+            if (!hasExistingTransaction && transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 

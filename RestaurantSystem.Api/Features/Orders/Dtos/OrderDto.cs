@@ -19,6 +19,7 @@ public record OrderDto
     public decimal DeliveryFee { get; set; }
     public decimal Discount { get; set; }
     public decimal DiscountPercentage { get; set; }
+    public decimal CustomerDiscountAmount { get; set; }
     public decimal Tip { get; set; }
     public decimal Total { get; set; }
 

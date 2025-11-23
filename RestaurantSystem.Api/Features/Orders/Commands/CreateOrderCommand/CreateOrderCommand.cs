@@ -21,6 +21,16 @@ public record CreateOrderCommand : ICommand<ApiResponse<OrderDto>>
     public bool HasUserLimitDiscount { get; set; }
     public decimal UserLimitAmount { get; set; }
 
+    // Pre-calculated values from basket (optional - if provided, use these instead of recalculating)
+    public decimal? BasketSubTotal { get; set; }
+    public decimal? BasketTax { get; set; }
+    public decimal? BasketDiscount { get; set; }
+    public decimal? BasketCustomerDiscount { get; set; }
+    public decimal? BasketTotal { get; set; }
+
+    // Fidelity Points
+    public int? PointsToRedeem { get; set; }
+
     // Focus Order
     public bool IsFocusOrder { get; set; }
     public int? Priority { get; set; }
