@@ -22,17 +22,20 @@ public class CancelOrderCommandHandler : ICommandHandler<CancelOrderCommand, Api
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<CancelOrderCommandHandler> _logger;
     private readonly IOrderMappingService _mappingService;
+    private readonly IEmailService _emailService;
 
     public CancelOrderCommandHandler(
         ApplicationDbContext context,
         ICurrentUserService currentUserService,
         IOrderMappingService mappingService,
+        IEmailService emailService,
         ILogger<CancelOrderCommandHandler> logger)
     {
         _context = context;
         _currentUserService = currentUserService;
         _logger = logger;
         _mappingService = mappingService;
+        _emailService = emailService;
     }
 
     public async Task<ApiResponse<OrderDto>> Handle(CancelOrderCommand command, CancellationToken cancellationToken)
@@ -95,6 +98,24 @@ public class CancelOrderCommandHandler : ICommandHandler<CancelOrderCommand, Api
         await _context.SaveChangesAsync(cancellationToken);
 
         var orderDto = await _mappingService.MapToOrderDtoAsync(order,cancellationToken);
+
+        // Send cancellation email to customer
+        if (!string.IsNullOrEmpty(order.CustomerEmail))
+        {
+            try
+            {
+                await _emailService.SendOrderCancellationEmailAsync(
+                    order.CustomerEmail,
+                    order.CustomerName ?? "Customer",
+                    order.OrderNumber,
+                    command.CancellationReason
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send cancellation email for order {OrderNumber}", order.OrderNumber);
+            }
+        }
 
         _logger.LogInformation("Order {OrderNumber} cancelled by user {UserId}. Reason: {Reason}",
             order.OrderNumber, _currentUserService.UserId, command.CancellationReason);

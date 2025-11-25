@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
@@ -15,6 +16,7 @@ public record UpdateOrderStatusCommand : ICommand<ApiResponse<OrderDto>>
     public Guid OrderId { get; set; }
     public OrderStatus NewStatus { get; set; }
     public string? Notes { get; set; }
+    public int? EstimatedPreparationMinutes { get; set; }
 }
 
 public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatusCommand, ApiResponse<OrderDto>>
@@ -24,19 +26,25 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
     private readonly IOrderEventService _orderEventService;
     private readonly ILogger<UpdateOrderStatusCommandHandler> _logger;
     private readonly IOrderMappingService _mappingService;
+    private readonly IEmailService _emailService;
+    private readonly IConfiguration _configuration;
 
     public UpdateOrderStatusCommandHandler(
           ApplicationDbContext context,
           ICurrentUserService currentUserService,
           IOrderEventService orderEventService,
           IOrderMappingService mappingService,
-          ILogger<UpdateOrderStatusCommandHandler> logger)
+          IEmailService emailService,
+          ILogger<UpdateOrderStatusCommandHandler> logger,
+          IConfiguration configuration)
     {
         _context = context;
         _currentUserService = currentUserService;
         _orderEventService = orderEventService;
         _mappingService = mappingService;
+        _emailService = emailService;
         _logger = logger;
+        _configuration = configuration;
     }
 
 
@@ -84,6 +92,32 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
         // Handle specific status changes
         switch (command.NewStatus)
         {
+            case OrderStatus.Confirmed:
+                // Set estimated delivery/preparation time
+                // Default to 20 minutes if not specified
+                var prepMinutes = command.EstimatedPreparationMinutes ?? 20;
+                order.EstimatedDeliveryTime = DateTime.UtcNow.AddMinutes(prepMinutes);
+                
+                // Send confirmation email
+                if (!string.IsNullOrEmpty(order.CustomerEmail))
+                {
+                    try
+                    {
+                        await _emailService.SendOrderConfirmedEmailAsync(
+                            order.CustomerEmail,
+                            order.CustomerName ?? "Customer",
+                            order.OrderNumber,
+                            order.Type.ToString(),
+                            prepMinutes
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send order confirmed email for order {OrderNumber}", order.OrderNumber);
+                    }
+                }
+                break;
+
             case OrderStatus.Completed:
                 order.ActualDeliveryTime = DateTime.UtcNow;
                 break;
@@ -93,6 +127,32 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
                 if (order.Type == OrderType.Delivery && !order.EstimatedDeliveryTime.HasValue)
                 {
                     order.EstimatedDeliveryTime = DateTime.UtcNow.AddMinutes(45);
+                }
+                break;
+            case OrderStatus.PendingCustomerApproval:
+                // Send delayed order email with approval options
+                if (!string.IsNullOrEmpty(order.CustomerEmail))
+                {
+                    try
+                    {
+                        var delayedPrepMinutes = command.EstimatedPreparationMinutes ?? 20;
+                        var baseUrl = _configuration["EmailSettings:BackendBaseUrl"] ?? "http://localhost:5221";
+                        var approveUrl = $"{baseUrl}/api/orders/{order.Id}/approve-delay";
+                        var rejectUrl = $"{baseUrl}/api/orders/{order.Id}/reject-delay";
+
+                        await _emailService.SendOrderDelayedEmailAsync(
+                            order.CustomerEmail,
+                            order.CustomerName ?? "Customer",
+                            order.OrderNumber,
+                            delayedPrepMinutes,
+                            approveUrl,
+                            rejectUrl
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send order delayed email for order {OrderNumber}", order.OrderNumber);
+                    }
                 }
                 break;
         }
@@ -123,7 +183,8 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
     {
         return currentStatus switch
         {
-            OrderStatus.Pending => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled,
+            OrderStatus.Pending => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled or OrderStatus.PendingCustomerApproval,
+            OrderStatus.PendingCustomerApproval => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled,
             OrderStatus.Confirmed => newStatus is OrderStatus.Preparing or OrderStatus.Cancelled,
             OrderStatus.Preparing => newStatus is OrderStatus.Ready or OrderStatus.Cancelled,
             OrderStatus.Ready => newStatus is OrderStatus.OutForDelivery or OrderStatus.Completed or OrderStatus.Cancelled,

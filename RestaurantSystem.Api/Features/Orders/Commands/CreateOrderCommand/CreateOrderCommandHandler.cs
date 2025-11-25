@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RestaurantSystem.Api.Settings;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Common.Services.Interfaces;
@@ -24,6 +26,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
     private readonly IFidelityPointsService _fidelityPointsService;
     private readonly ICustomerDiscountService _customerDiscountService;
     private readonly ITaxConfigurationService _taxConfigurationService;
+    private readonly IEmailService _emailService;
+    private readonly EmailSettings _emailSettings;
 
     public CreateOrderCommandHandler(
         ApplicationDbContext context,
@@ -33,6 +37,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         IFidelityPointsService fidelityPointsService,
         ICustomerDiscountService customerDiscountService,
         ITaxConfigurationService taxConfigurationService,
+        IEmailService emailService,
+        IOptions<EmailSettings> emailSettings,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _context = context;
@@ -42,6 +48,8 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         _fidelityPointsService = fidelityPointsService;
         _customerDiscountService = customerDiscountService;
         _taxConfigurationService = taxConfigurationService;
+        _emailService = emailService;
+        _emailSettings = emailSettings.Value;
         _logger = logger;
     }
 
@@ -457,6 +465,65 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             if (order.IsFocusOrder)
             {
                 await _orderEventService.NotifyFocusOrderUpdate(orderDto);
+            }
+
+            // Send emails
+            try
+            {
+                // 1. Send Order Received email to customer
+                if (!string.IsNullOrEmpty(order.CustomerEmail))
+                {
+                    var orderItems = order.Items.Select(i => (i.ProductName, i.Quantity, i.ItemTotal));
+                    
+                    // Format delivery address if it exists
+                    string? deliveryAddressStr = null;
+                    if (order.DeliveryAddress != null)
+                    {
+                        deliveryAddressStr = $"{order.DeliveryAddress.AddressLine1}, {order.DeliveryAddress.PostalCode} {order.DeliveryAddress.City}";
+                    }
+
+                    await _emailService.SendOrderReceivedEmailAsync(
+                        order.CustomerEmail,
+                        order.CustomerName ?? "Customer",
+                        order.OrderNumber,
+                        order.Type.ToString(),
+                        order.Total,
+                        orderItems,
+                        order.Notes,
+                        deliveryAddressStr
+                    );
+                }
+
+                // 2. Send New Order notification to Admin
+                if (!string.IsNullOrEmpty(_emailSettings.AdminEmail))
+                {
+                    var orderItems = order.Items.Select(i => (i.ProductName, i.Quantity, i.ItemTotal));
+                    
+                    // Format delivery address if it exists
+                    string? deliveryAddressStr = null;
+                    if (order.DeliveryAddress != null)
+                    {
+                        deliveryAddressStr = $"{order.DeliveryAddress.AddressLine1}, {order.DeliveryAddress.PostalCode} {order.DeliveryAddress.City}";
+                    }
+
+                    await _emailService.SendOrderConfirmationAdminEmailAsync(
+                        _emailSettings.AdminEmail,
+                        order.OrderNumber,
+                        order.CustomerName ?? "Guest",
+                        order.CustomerEmail ?? "N/A",
+                        order.CustomerPhone ?? "N/A",
+                        order.Type.ToString(),
+                        order.Total,
+                        orderItems,
+                        order.Notes,
+                        deliveryAddressStr
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't fail the request if email sending fails, just log it
+                _logger.LogError(ex, "Failed to send order emails for order {OrderNumber}", order.OrderNumber);
             }
 
             _logger.LogInformation("Order {OrderNumber} created successfully by user {UserId}",

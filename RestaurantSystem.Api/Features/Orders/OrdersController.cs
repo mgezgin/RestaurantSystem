@@ -9,6 +9,8 @@ using RestaurantSystem.Api.Features.Orders.Commands.CancelOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.CreateOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.RefundPaymentCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.ToggleFocusOrderCommand;
+using RestaurantSystem.Api.Features.Orders.Commands.ApproveDelayCommand;
+using RestaurantSystem.Api.Features.Orders.Commands.RejectDelayCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.UpdateOrderStatusCommand;
 using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Queries.GetFocusOrdersQuery;
@@ -210,7 +212,7 @@ public class OrdersController : ControllerBase
             }
 
             // Send customer confirmation email
-            await _emailService.SendOrderConfirmationEmailAsync(
+            await _emailService.SendOrderReceivedEmailAsync(
                 order.CustomerEmail ?? "noemail@example.com",
                 order.CustomerName ?? "Valued Customer",
                 order.OrderNumber,
@@ -249,6 +251,345 @@ public class OrdersController : ControllerBase
         {
             _logger.LogError(ex, "Failed to send order confirmation emails for order {OrderId}", orderId);
             return BadRequest(ApiResponse<string>.Failure($"Failed to send confirmation emails: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Quick confirm order from email link
+    /// </summary>
+    [HttpGet("{orderNumber}/quick-confirm")]
+    [AllowAnonymous]
+    public async Task<IActionResult> QuickConfirmOrder(string orderNumber, [FromQuery] int minutes = 15)
+    {
+        try
+        {
+            // Find order by order number
+            var orders = await _mediator.SendQuery(new GetOrdersQuery(
+                Status: null,
+                PaymentStatus: null,
+                OrderType: null,
+                StartDate: null,
+                EndDate: null,
+                UserId: null,
+                Search: orderNumber,
+                IsFocusOrder: null,
+                OrderBy: "OrderDate",
+                Descending: true,
+                Page: 1,
+                PageSize: 1
+            ));
+            var order = orders.Data?.Items.FirstOrDefault();
+
+            if (order == null)
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Order Not Found</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>❌ Order Not Found</h2>
+                        <p>Order {orderNumber} could not be found.</p>
+                    </body>
+                    </html>", "text/html");
+            }
+
+            if (order.Status != "Pending")
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Order Already Processed</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>ℹ️ Order Already Processed</h2>
+                        <p>Order {orderNumber} has already been {order.Status.ToLower()}.</p>
+                        <p>Current status: <strong>{order.Status}</strong></p>
+                    </body>
+                    </html>", "text/html");
+            }
+
+            // Update order status to Confirmed
+            var command = new UpdateOrderStatusCommand
+            {
+                OrderId = order.Id,
+                NewStatus = Domain.Common.Enums.OrderStatus.Confirmed,
+                EstimatedPreparationMinutes = minutes,
+                Notes = $"Confirmed via email with {minutes} min preparation time"
+            };
+
+            var result = await _mediator.SendCommand(command);
+
+            if (result.Success)
+            {
+                return Content($@"
+                    <html>
+                    <head>
+                        <title>Order Confirmed</title>
+                        <meta http-equiv='refresh' content='3;url=http://localhost:3000/admin/orders-management'>
+                    </head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <div style='max-width: 500px; margin: 0 auto;'>
+                            <div style='font-size: 60px; color: #059669; margin-bottom: 20px;'>✓</div>
+                            <h2 style='color: #059669;'>Order Confirmed!</h2>
+                            <p>Order <strong>{orderNumber}</strong> has been confirmed.</p>
+                            <p>Preparation time: <strong>{minutes} minutes</strong></p>
+                            <p style='color: #666; font-size: 14px; margin-top: 30px;'>
+                                The customer will receive a confirmation email shortly.
+                            </p>
+                            <p style='color: #666; font-size: 12px; margin-top: 20px;'>
+                                Redirecting to dashboard in 3 seconds...
+                            </p>
+                        </div>
+                    </body>
+                    </html>", "text/html");
+            }
+            else
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Confirmation Failed</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>❌ Confirmation Failed</h2>
+                        <p>{result.Message}</p>
+                    </body>
+                    </html>", "text/html");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to quick confirm order {OrderNumber}", orderNumber);
+            return Content($@"
+                <html>
+                <head><title>Error</title></head>
+                <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                    <h2>❌ Error</h2>
+                    <p>An error occurred while confirming the order.</p>
+                    <p style='color: #666; font-size: 12px;'>{ex.Message}</p>
+                </body>
+                </html>", "text/html");
+        }
+    }
+
+    /// <summary>
+    /// Quick cancel order from email link
+    /// </summary>
+    [HttpGet("{orderNumber}/quick-cancel")]
+    [AllowAnonymous]
+    public async Task<IActionResult> QuickCancelOrder(string orderNumber)
+    {
+        try
+        {
+            // Find order by order number
+            var orders = await _mediator.SendQuery(new GetOrdersQuery(
+                Status: null,
+                PaymentStatus: null,
+                OrderType: null,
+                StartDate: null,
+                EndDate: null,
+                UserId: null,
+                Search: orderNumber,
+                IsFocusOrder: null,
+                OrderBy: "OrderDate",
+                Descending: true,
+                Page: 1,
+                PageSize: 1
+            ));
+            var order = orders.Data?.Items.FirstOrDefault();
+
+            if (order == null)
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Order Not Found</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>❌ Order Not Found</h2>
+                        <p>Order {orderNumber} could not be found.</p>
+                    </body>
+                    </html>", "text/html");
+            }
+
+            if (order.Status == "Cancelled")
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Order Already Cancelled</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>ℹ️ Order Already Cancelled</h2>
+                        <p>Order {orderNumber} has already been cancelled.</p>
+                    </body>
+                    </html>", "text/html");
+            }
+
+            if (order.Status != "Pending")
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Cannot Cancel Order</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>⚠️ Cannot Cancel Order</h2>
+                        <p>Order {orderNumber} cannot be cancelled because it is already {order.Status.ToLower()}.</p>
+                        <p>Current status: <strong>{order.Status}</strong></p>
+                    </body>
+                    </html>", "text/html");
+            }
+
+            // Cancel the order
+            var command = new CancelOrderCommand
+            {
+                OrderId = order.Id,
+                CancellationReason = "Cancelled by admin via email"
+            };
+
+            var result = await _mediator.SendCommand(command);
+
+            if (result.Success)
+            {
+                return Content($@"
+                    <html>
+                    <head>
+                        <title>Order Cancelled</title>
+                        <meta http-equiv='refresh' content='3;url=http://localhost:3000/admin/orders-management'>
+                    </head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <div style='max-width: 500px; margin: 0 auto;'>
+                            <div style='font-size: 60px; color: #dc2626; margin-bottom: 20px;'>✕</div>
+                            <h2 style='color: #dc2626;'>Order Cancelled</h2>
+                            <p>Order <strong>{orderNumber}</strong> has been cancelled.</p>
+                            <p style='color: #666; font-size: 14px; margin-top: 30px;'>
+                                The customer will be notified about the cancellation.
+                            </p>
+                            <p style='color: #666; font-size: 12px; margin-top: 20px;'>
+                                Redirecting to dashboard in 3 seconds...
+                            </p>
+                        </div>
+                    </body>
+                    </html>", "text/html");
+            }
+            else
+            {
+                return Content($@"
+                    <html>
+                    <head><title>Cancellation Failed</title></head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                        <h2>❌ Cancellation Failed</h2>
+                        <p>{result.Message}</p>
+                    </body>
+                    </html>", "text/html");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to quick cancel order {OrderNumber}", orderNumber);
+            return Content($@"
+                <html>
+                <head><title>Error</title></head>
+                <body style='font-family: Arial; text-align: center; padding: 50px;'>
+                    <h2>❌ Error</h2>
+                    <p>An unexpected error occurred.</p>
+                </body>
+                </html>", "text/html");
+        }
+    }
+
+    [HttpGet("{id}/approve-delay")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ApproveDelay(Guid id)
+    {
+        try
+        {
+            var command = new ApproveDelayCommand(id);
+            var result = await _mediator.SendCommand(command);
+
+            if (result.Success)
+            {
+                return Content($@"
+                    <html>
+                    <head>
+                        <title>Delay Approved</title>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    </head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px; background-color: #f9f9f9;'>
+                        <div style='max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                            <div style='font-size: 60px; color: #10b981; margin-bottom: 20px;'>✓</div>
+                            <h2 style='color: #10b981;'>Delay Approved</h2>
+                            <p>Thank you! Your order has been confirmed with the new preparation time.</p>
+                            <p>We're getting started on your delicious meal right away!</p>
+                        </div>
+                    </body>
+                    </html>", "text/html");
+            }
+            else
+            {
+                return Content($@"
+                    <html>
+                    <head>
+                        <title>Action Failed</title>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    </head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px; background-color: #f9f9f9;'>
+                        <div style='max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                            <div style='font-size: 60px; color: #ef4444; margin-bottom: 20px;'>❌</div>
+                            <h2>Action Failed</h2>
+                            <p>{result.Message}</p>
+                        </div>
+                    </body>
+                    </html>", "text/html");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to approve delay for order {OrderId}", id);
+            return Content("An error occurred while processing your request.", "text/plain");
+        }
+    }
+
+    [HttpGet("{id}/reject-delay")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RejectDelay(Guid id)
+    {
+        try
+        {
+            var command = new RejectDelayCommand(id);
+            var result = await _mediator.SendCommand(command);
+
+            if (result.Success)
+            {
+                return Content($@"
+                    <html>
+                    <head>
+                        <title>Order Cancelled</title>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    </head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px; background-color: #f9f9f9;'>
+                        <div style='max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                            <div style='font-size: 60px; color: #ef4444; margin-bottom: 20px;'>✕</div>
+                            <h2 style='color: #ef4444;'>Order Cancelled</h2>
+                            <p>We've received your request to cancel the order.</p>
+                            <p>You will not be charged for this order.</p>
+                            <p>We hope to serve you again in the future!</p>
+                        </div>
+                    </body>
+                    </html>", "text/html");
+            }
+            else
+            {
+                return Content($@"
+                    <html>
+                    <head>
+                        <title>Action Failed</title>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    </head>
+                    <body style='font-family: Arial; text-align: center; padding: 50px; background-color: #f9f9f9;'>
+                        <div style='max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                            <div style='font-size: 60px; color: #ef4444; margin-bottom: 20px;'>❌</div>
+                            <h2>Action Failed</h2>
+                            <p>{result.Message}</p>
+                        </div>
+                    </body>
+                    </html>", "text/html");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reject delay for order {OrderId}", id);
+            return Content("An error occurred while processing your request.", "text/plain");
         }
     }
 }

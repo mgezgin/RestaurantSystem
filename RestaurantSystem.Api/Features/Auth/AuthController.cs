@@ -38,6 +38,28 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Google login
+    /// </summary>
+    [HttpPost("google-login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> GoogleLogin([FromBody] GoogleLoginCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Apple login
+    /// </summary>
+    [HttpPost("apple-login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> AppleLogin([FromBody] AppleLoginCommand command)
+    {
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Refresh access token
     /// </summary>
     [HttpPost("refresh-token")]

@@ -273,26 +273,98 @@ public class EmailService : IEmailService
         return message;
     }
 
-    public async Task SendOrderConfirmationEmailAsync(string customerEmail, string customerName, string orderNumber,
+    public async Task SendOrderReceivedEmailAsync(string customerEmail, string customerName, string orderNumber,
         string orderType, decimal total, IEnumerable<(string name, int quantity, decimal price)> items,
         string? specialInstructions = null, string? deliveryAddress = null)
     {
         try
         {
-            var subject = EmailTemplates.OrderConfirmation.Subject;
-            var htmlBody = EmailTemplates.OrderConfirmation.GetHtmlBody(
+            var subject = EmailTemplates.OrderReceived.Subject;
+            var htmlBody = EmailTemplates.OrderReceived.GetHtmlBody(
                 customerName, orderNumber, orderType, total, items, specialInstructions, deliveryAddress);
-            var textBody = EmailTemplates.OrderConfirmation.GetTextBody(
+            var textBody = EmailTemplates.OrderReceived.GetTextBody(
                 customerName, orderNumber, orderType, total, items, specialInstructions, deliveryAddress);
 
             await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
 
-            _logger.LogInformation("Order confirmation email sent to {Email} for order {OrderNumber}",
+            _logger.LogInformation("Order received email sent to {Email} for order {OrderNumber}",
                 customerEmail, orderNumber);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send order confirmation email to {Email} for order {OrderNumber}",
+            _logger.LogError(ex, "Failed to send order received email to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+            throw;
+        }
+    }
+
+    public async Task SendOrderConfirmedEmailAsync(string customerEmail, string customerName, string orderNumber,
+        string orderType, int estimatedPreparationMinutes)
+    {
+        try
+        {
+            var subject = EmailTemplates.OrderConfirmed.Subject;
+            var htmlBody = EmailTemplates.OrderConfirmed.GetHtmlBody(
+                customerName, orderNumber, orderType, estimatedPreparationMinutes);
+            var textBody = EmailTemplates.OrderConfirmed.GetTextBody(
+                customerName, orderNumber, orderType, estimatedPreparationMinutes);
+
+            await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Order confirmed email sent to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order confirmed email to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+            throw;
+        }
+    }
+
+    public async Task SendOrderCancellationEmailAsync(string customerEmail, string customerName, string orderNumber,
+        string cancellationReason)
+    {
+        try
+        {
+            var subject = EmailTemplates.OrderCancelled.Subject;
+            var htmlBody = EmailTemplates.OrderCancelled.GetHtmlBody(
+                customerName, orderNumber, cancellationReason);
+            var textBody = EmailTemplates.OrderCancelled.GetTextBody(
+                customerName, orderNumber, cancellationReason);
+
+            await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Order cancellation email sent to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order cancellation email to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+            throw;
+        }
+    }
+
+    public async Task SendOrderDelayedEmailAsync(string customerEmail, string customerName, string orderNumber,
+        int delayMinutes, string approveUrl, string rejectUrl)
+    {
+        try
+        {
+            var subject = EmailTemplates.OrderDelayed.Subject;
+            var htmlBody = EmailTemplates.OrderDelayed.GetHtmlBody(
+                customerName, orderNumber, delayMinutes, approveUrl, rejectUrl);
+            var textBody = EmailTemplates.OrderDelayed.GetTextBody(
+                customerName, orderNumber, delayMinutes, approveUrl, rejectUrl);
+
+            await SendEmailAsync(customerEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Order delayed email sent to {Email} for order {OrderNumber}",
+                customerEmail, orderNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send order delayed email to {Email} for order {OrderNumber}",
                 customerEmail, orderNumber);
             throw;
         }

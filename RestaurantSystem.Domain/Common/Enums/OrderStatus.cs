@@ -9,5 +9,6 @@ public enum OrderStatus
     Delivered = 6,
     Completed = 7,
     Cancelled = 8,
-    Refunded = 9
+    Refunded = 9,
+    PendingCustomerApproval = 10
 }

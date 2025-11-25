@@ -50,6 +50,13 @@ public class EmailSettings
     public string FromName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Admin email address for notifications
+    /// </summary>
+    [Required]
+    [EmailAddress]
+    public string AdminEmail { get; set; } = string.Empty;
+
+    /// <summary>
     /// Whether to use authentication
     /// </summary>
     public bool UseAuthentication { get; set; } = true;

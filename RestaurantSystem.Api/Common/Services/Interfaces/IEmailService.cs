@@ -92,7 +92,7 @@ public interface IEmailService
         string? specialRequests = null, string? notes = null);
 
     /// <summary>
-    /// Sends order confirmation email to customer
+    /// Sends order received email to customer (when order is placed but not yet confirmed)
     /// </summary>
     /// <param name="customerEmail">Customer email address</param>
     /// <param name="customerName">Customer name</param>
@@ -103,9 +103,33 @@ public interface IEmailService
     /// <param name="specialInstructions">Special instructions</param>
     /// <param name="deliveryAddress">Delivery address (if applicable)</param>
     /// <returns>Task representing the async operation</returns>
-    Task SendOrderConfirmationEmailAsync(string customerEmail, string customerName, string orderNumber,
+    Task SendOrderReceivedEmailAsync(string customerEmail, string customerName, string orderNumber,
         string orderType, decimal total, IEnumerable<(string name, int quantity, decimal price)> items,
         string? specialInstructions = null, string? deliveryAddress = null);
+
+    /// <summary>
+    /// Sends order confirmed email to customer (when admin confirms the order)
+    /// </summary>
+    /// <param name="customerEmail">Customer email address</param>
+    /// <param name="customerName">Customer name</param>
+    /// <param name="orderNumber">Order number</param>
+    /// <param name="orderType">Order type</param>
+    /// <param name="estimatedPreparationMinutes">Estimated preparation time in minutes</param>
+    /// <returns>Task representing the async operation</returns>
+    Task SendOrderConfirmedEmailAsync(string customerEmail, string customerName, string orderNumber,
+        string orderType, int estimatedPreparationMinutes);
+
+    /// <summary>
+    /// Send order cancellation email to customer
+    /// </summary>
+    Task SendOrderCancellationEmailAsync(string customerEmail, string customerName, string orderNumber,
+        string cancellationReason);
+
+    /// <summary>
+    /// Send order delayed email to customer with approval options
+    /// </summary>
+    Task SendOrderDelayedEmailAsync(string customerEmail, string customerName, string orderNumber,
+        int delayMinutes, string approveUrl, string rejectUrl);
 
     /// <summary>
     /// Sends order confirmation email to admin/restaurant
