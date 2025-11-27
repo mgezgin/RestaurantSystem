@@ -18,7 +18,10 @@ public class ProductIngredient : Entity
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    public Guid? GlobalIngredientId { get; set; } // Optional link to global ingredient definition
+
     // Navigation properties
     public virtual Product Product { get; set; } = null!;
+    public virtual GlobalIngredient? GlobalIngredient { get; set; }
     public virtual ICollection<ProductIngredientDescription> Descriptions { get; set; } = [];
 }

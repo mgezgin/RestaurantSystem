@@ -36,6 +36,9 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             .Include(p => p.Variations.OrderBy(v => v.DisplayOrder))
             .Include(p => p.DetailedIngredients.Where(di => di.IsActive).OrderBy(di => di.DisplayOrder))
                 .ThenInclude(di => di.Descriptions)
+            .Include(p => p.DetailedIngredients)
+                .ThenInclude(di => di.GlobalIngredient)
+                    .ThenInclude(gi => gi!.Translations)
             .Include(p => p.SuggestedSideItems) // Add soft delete filter here
                 .ThenInclude(si => si.SideItemProduct)
                     .ThenInclude(product => product!.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
@@ -62,24 +65,44 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             Allergens = product.Allergens,
             DisplayOrder = product.DisplayOrder,
             DetailedIngredients = product.DetailedIngredients
-                .Select(di => new ProductIngredientDto
-                {
-                    Id = di.Id,
-                    Name = di.Name,
-                    IsOptional = di.IsOptional,
-                    Price = di.Price,
-                    IsIncludedInBasePrice = di.IsIncludedInBasePrice,
-                    IsActive = di.IsActive,
-                    DisplayOrder = di.DisplayOrder,
-                    MaxQuantity = di.MaxQuantity,
-                    Content = di.Descriptions.ToDictionary(
-                        d => d.LanguageCode,
-                        d => new ProductIngredientContentDto
+                .Select(di => {
+                    // Start with global translations if available
+                    var content = new Dictionary<string, ProductIngredientContentDto>();
+                    
+                    if (di.GlobalIngredient != null)
+                    {
+                        foreach (var trans in di.GlobalIngredient.Translations)
                         {
-                            Name = d.Name,
-                            Description = d.Description
+                            content[trans.LanguageCode] = new ProductIngredientContentDto
+                            {
+                                Name = trans.Name,
+                                Description = null // Global ingredients don't have descriptions in this context yet
+                            };
                         }
-                    )
+                    }
+
+                    // Override with specific descriptions
+                    foreach (var desc in di.Descriptions)
+                    {
+                        content[desc.LanguageCode] = new ProductIngredientContentDto
+                        {
+                            Name = desc.Name,
+                            Description = desc.Description
+                        };
+                    }
+
+                    return new ProductIngredientDto
+                    {
+                        Id = di.Id,
+                        Name = di.Name,
+                        IsOptional = di.IsOptional,
+                        Price = di.Price,
+                        IsIncludedInBasePrice = di.IsIncludedInBasePrice,
+                        IsActive = di.IsActive,
+                        DisplayOrder = di.DisplayOrder,
+                        MaxQuantity = di.MaxQuantity,
+                        Content = content
+                    };
                 })
                 .ToList(),
             Images = product.Images.Select(i => new ProductImageDto
