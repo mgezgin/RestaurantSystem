@@ -16,6 +16,9 @@ public record AddToBasketDto
 
     // Selected side items with quantities
     public List<SelectedSideItemDto>? SelectedSideItems { get; set; }
+    
+    // Selected menu options (for Menu type products)
+    public List<SelectedMenuOptionDto>? SelectedMenuOptions { get; set; }
 }
 
 public record SelectedSideItemDto

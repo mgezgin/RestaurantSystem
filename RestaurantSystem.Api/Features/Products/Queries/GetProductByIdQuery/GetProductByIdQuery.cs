@@ -42,6 +42,10 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             .Include(p => p.SuggestedSideItems) // Add soft delete filter here
                 .ThenInclude(si => si.SideItemProduct)
                     .ThenInclude(product => product!.Images.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
+            .Include(p => p.MenuDefinition)
+                .ThenInclude(md => md!.Sections)
+                    .ThenInclude(s => s.Items)
+                        .ThenInclude(i => i.Product)
             .FirstOrDefaultAsync(p => p.Id == query.Id && !p.IsDeleted, cancellationToken); // Also filter the main product
         if (product == null)
         {
@@ -172,6 +176,39 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
                         .ToList()
                 })
                 .ToList(),
+            MenuDefinition = product.MenuDefinition != null ? new MenuDefinitionDto
+            {
+                Id = product.MenuDefinition.Id,
+                IsAlwaysAvailable = product.MenuDefinition.IsAlwaysAvailable,
+                StartTime = product.MenuDefinition.StartTime,
+                EndTime = product.MenuDefinition.EndTime,
+                AvailableMonday = product.MenuDefinition.AvailableMonday,
+                AvailableTuesday = product.MenuDefinition.AvailableTuesday,
+                AvailableWednesday = product.MenuDefinition.AvailableWednesday,
+                AvailableThursday = product.MenuDefinition.AvailableThursday,
+                AvailableFriday = product.MenuDefinition.AvailableFriday,
+                AvailableSaturday = product.MenuDefinition.AvailableSaturday,
+                AvailableSunday = product.MenuDefinition.AvailableSunday,
+                Sections = product.MenuDefinition.Sections.Select(s => new MenuSectionDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    DisplayOrder = s.DisplayOrder,
+                    IsRequired = s.IsRequired,
+                    MinSelection = s.MinSelection,
+                    MaxSelection = s.MaxSelection,
+                    Items = s.Items.Select(i => new MenuSectionItemDto
+                    {
+                        Id = i.Id,
+                        ProductId = i.ProductId,
+                        ProductName = i.Product?.Name,
+                        AdditionalPrice = i.AdditionalPrice,
+                        DisplayOrder = i.DisplayOrder,
+                        IsDefault = i.IsDefault
+                    }).OrderBy(i => i.DisplayOrder).ToList()
+                }).OrderBy(s => s.DisplayOrder).ToList()
+            } : null,
             Content = new()
         };
 

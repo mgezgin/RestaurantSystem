@@ -8,6 +8,7 @@ using RestaurantSystem.Api.Features.Basket.Interfaces;
 using RestaurantSystem.Api.Features.FidelityPoints.Interfaces;
 using RestaurantSystem.Api.Features.Settings.Interfaces;
 using RestaurantSystem.Domain.Entities;
+using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 using System.Text.Json;
 
@@ -80,79 +81,101 @@ public class BasketService : IBasketService
 
         if (item.MenuId.HasValue && item.MenuId.Value != Guid.Empty)
         {
-            var menu = await _context.Menus
-                .Include(m => m.MenuItems)
-                    .ThenInclude(mi => mi.Product)
-                .Include(m => m.MenuItems)
-                    .ThenInclude(mi => mi.ProductVariation)
-                .FirstOrDefaultAsync(m => m.Id == item.MenuId && m.IsActive && !m.IsDeleted);
-
-            if (menu == null)
-                throw new InvalidOperationException("Menu not found or unavailable");
-
-            decimal menuPrice = 0;
-
-            foreach (var menuItem in menu.MenuItems)
-            {
-                if (menuItem.SpecialPrice.HasValue)
-                {
-                    // Use special price if available
-                    menuPrice += menuItem.SpecialPrice.Value;
-                }
-                else
-                {
-                    // Use product base price + variation modifier
-                    var itemPrice = menuItem.Product.BasePrice;
-                    if (menuItem.ProductVariation != null)
-                    {
-                        itemPrice += menuItem.ProductVariation.PriceModifier;
-                    }
-                    menuPrice += itemPrice;
-                }
-            }
-
-            // Check if menu already exists in basket
-            var existingMenuItem = await _context.BasketItems
-                .FirstOrDefaultAsync(bi =>
-                    bi.BasketId == basket.Id &&
-                    bi.MenuId == item.MenuId);
-
-            if (existingMenuItem != null)
-            {
-                // Update quantity
-                existingMenuItem.Quantity += item.Quantity;
-                existingMenuItem.ItemTotal = existingMenuItem.Quantity * existingMenuItem.UnitPrice;
-                existingMenuItem.UpdatedAt = DateTime.UtcNow;
-                existingMenuItem.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
-            }
-            else
-            {
-                // Create new basket item for menu
-                var basketItem = new BasketItem
-                {
-                    BasketId = basket.Id,
-                    MenuId = item.MenuId,
-                    Quantity = item.Quantity,
-                    UnitPrice = menuPrice,
-                    ItemTotal = menuPrice * item.Quantity,
-                    SpecialInstructions = item.SpecialInstructions,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                };
-
-                _context.BasketItems.Add(basketItem);
-            }
+            // Existing daily menu logic (keep for backward compatibility if needed, or remove if fully replacing)
+            // For now, let's assume we are using the new ProductType.Menu structure via ProductId
         }
-        else if (item.ProductId != Guid.Empty)
+        
+        if (item.ProductId != Guid.Empty)
         {
             // Validate product exists and is available
             var product = await _context.Products
                 .Include(p => p.Variations)
                 .Include(p => p.DetailedIngredients)
+                .Include(p => p.MenuDefinition)
+                    .ThenInclude(md => md!.Sections)
+                        .ThenInclude(s => s.Items)
+                            .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.IsActive && p.IsAvailable);
 
             if (product == null)
                 throw new InvalidOperationException("Product not found or unavailable");
+
+            // Handle Menu Type Product
+            if (product.Type == ProductType.Menu)
+            {
+                if (product.MenuDefinition == null)
+                    throw new InvalidOperationException("Menu definition not found");
+
+                // Calculate total price including options
+                decimal menuTotalPrice = product.BasePrice;
+                var selectedOptions = item.SelectedMenuOptions ?? new List<SelectedMenuOptionDto>();
+                
+                // Validate required sections and calculate price
+                foreach (var section in product.MenuDefinition.Sections)
+                {
+                    var sectionSelections = selectedOptions.Where(o => o.SectionId == section.Id).ToList();
+                    var totalQuantity = sectionSelections.Sum(o => o.Quantity);
+                    
+                    if (section.IsRequired && totalQuantity < section.MinSelection)
+                    {
+                        throw new InvalidOperationException($"Section '{section.Name}' requires at least {section.MinSelection} selection(s)");
+                    }
+                    
+                    if (totalQuantity > section.MaxSelection)
+                    {
+                        throw new InvalidOperationException($"Section '{section.Name}' allows at most {section.MaxSelection} selection(s)");
+                    }
+                    
+                    foreach (var selection in sectionSelections)
+                    {
+                        var sectionItem = section.Items.FirstOrDefault(i => i.ProductId == selection.ItemId);
+                        if (sectionItem == null)
+                            throw new InvalidOperationException($"Item not found in section '{section.Name}'");
+                            
+                        menuTotalPrice += sectionItem.AdditionalPrice * selection.Quantity;
+                    }
+                }
+
+                // Create Parent Basket Item
+                var basketItem = new BasketItem
+                {
+                    BasketId = basket.Id,
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    UnitPrice = menuTotalPrice,
+                    ItemTotal = menuTotalPrice * item.Quantity,
+                    SpecialInstructions = item.SpecialInstructions,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+                
+                _context.BasketItems.Add(basketItem);
+                
+                // Create Child Basket Items for selected options
+                foreach (var option in selectedOptions)
+                {
+                    var section = product.MenuDefinition.Sections.First(s => s.Id == option.SectionId);
+                    var sectionItem = section.Items.First(i => i.ProductId == option.ItemId);
+                    
+                    var childItem = new BasketItem
+                    {
+                        BasketId = basket.Id,
+                        ProductId = option.ItemId, // The actual product ID of the option (e.g., Coke)
+                        ParentBasketItem = basketItem,
+                        Quantity = item.Quantity * option.Quantity, // Scale by main item quantity
+                        UnitPrice = sectionItem.AdditionalPrice, // Price is already added to parent, but we can store it here for reference or set to 0 if included
+                        ItemTotal = 0, // Included in parent total usually, or calculate if needed. Let's keep 0 to avoid double counting in simple sum
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+                    _context.BasketItems.Add(childItem);
+                }
+                
+                await _context.SaveChangesAsync();
+                await RecalculateBasketTotalsAsync(basket.Id);
+                await InvalidateBasketCacheAsync(sessionId, userId);
+                return await GetBasketAsync(sessionId, userId) ?? throw new InvalidOperationException("Failed to retrieve basket");
+            }
 
             // Validate variation if specified
             ProductVariation? variation = null;
@@ -633,6 +656,9 @@ public class BasketService : IBasketService
                 .ThenInclude(bi => bi.Menu)
                 .ThenInclude(b => b.MenuItems)
             .Include(b => b.Items)
+                .ThenInclude(bi => bi.ChildBasketItems)
+                    .ThenInclude(c => c.Product)
+            .Include(b => b.Items)
             .Where(b => !b.IsDeleted);
 
         if (userId.HasValue && userId.Value != Guid.Empty)
@@ -671,6 +697,119 @@ public class BasketService : IBasketService
             }
         }
 
+        var allItems = (await Task.WhenAll(basket.Items.Select(async item =>
+        {
+            // Get ingredient names from product's detailed ingredients
+            var productIngredients = item.Product?.DetailedIngredients ?? new List<ProductIngredient>();
+
+            var selectedNames = item.SelectedIngredients?
+                .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
+                .ToList();
+
+            var excludedNames = item.ExcludedIngredients?
+                .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
+                .ToList();
+
+            var addedNames = item.AddedIngredients?
+                .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
+                .ToList();
+
+            // Deserialize and fetch side items details
+            List<BasketSideItemDto>? selectedSideItems = null;
+            if (!string.IsNullOrEmpty(item.SelectedSideItemsJson))
+            {
+                try
+                {
+                    var selectedSides = JsonSerializer.Deserialize<List<SelectedSideItemDto>>(item.SelectedSideItemsJson);
+                    if (selectedSides != null && selectedSides.Count > 0)
+                    {
+                        var sideItemIds = selectedSides.Select(s => s.Id).ToList();
+                        var sideItems = await _context.Products
+                            .Where(p => sideItemIds.Contains(p.Id))
+                            .ToListAsync();
+
+                        selectedSideItems = selectedSides.Select(selectedSide =>
+                        {
+                            var sideItem = sideItems.FirstOrDefault(s => s.Id == selectedSide.Id);
+                            if (sideItem != null)
+                            {
+                                return new BasketSideItemDto
+                                {
+                                    Id = sideItem.Id,
+                                    Name = sideItem.Name,
+                                    Description = sideItem.Description,
+                                    Price = sideItem.BasePrice,
+                                    ImageUrl = sideItem.ImageUrl,
+                                    Quantity = selectedSide.Quantity,
+                                    SubTotal = sideItem.BasePrice * selectedSide.Quantity
+                                };
+                            }
+                            return null;
+                        }).Where(s => s != null).ToList()!;
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize side items JSON for basket item {BasketItemId}", item.Id);
+                }
+            }
+
+            // Deserialize ingredient quantities
+            Dictionary<Guid, int>? ingredientQuantities = null;
+            if (!string.IsNullOrEmpty(item.IngredientQuantitiesJson))
+            {
+                try
+                {
+                    ingredientQuantities = JsonSerializer.Deserialize<Dictionary<Guid, int>>(item.IngredientQuantitiesJson);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize ingredient quantities JSON for basket item {BasketItemId}", item.Id);
+                }
+            }
+
+            return new BasketItemDto
+            {
+                Id = item.Id,
+                ProductId = item.ProductId,
+                ProductName = item.Product != null ? item.Product.Name : item.Menu?.Name ?? string.Empty,
+                MenuId = item.MenuId,
+                ProductDescription = item.Product != null ? item.Product.Description : item.Menu?.Description ?? string.Empty,
+                ProductImageUrl = item.Product?.ImageUrl ?? string.Empty,
+                ProductVariationId = item.ProductVariationId,
+                VariationName = item.ProductVariation?.Name,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                ItemTotal = item.ItemTotal,
+                SpecialInstructions = item.SpecialInstructions,
+                SelectedIngredients = item.SelectedIngredients,
+                ExcludedIngredients = item.ExcludedIngredients,
+                AddedIngredients = item.AddedIngredients,
+                IngredientQuantities = ingredientQuantities,
+                CustomizationPrice = item.CustomizationPrice,
+                SelectedIngredientNames = selectedNames,
+                ExcludedIngredientNames = excludedNames,
+                AddedIngredientNames = addedNames,
+                SelectedSideItems = selectedSideItems,
+                ChildItems = item.ChildBasketItems.Select(child => new BasketItemDto
+                {
+                    Id = child.Id,
+                    ProductId = child.ProductId,
+                    ProductName = child.Product?.Name,
+                    Quantity = child.Quantity,
+                    UnitPrice = child.UnitPrice,
+                    ItemTotal = child.ItemTotal,
+                    // Map other properties if needed, but for menu options these are usually minimal
+                }).ToList()
+            };
+        }))).ToList();
+
+        // Filter out child items from the top-level list, as they are now nested under their parents
+        // We only want items that do NOT have a parent to be at the top level
+        var rootItems = allItems.Where(i => 
+            !basket.Items.Any(bi => bi.Id == i.Id && bi.ParentBasketItemId.HasValue)
+        ).ToList();
+
         return new BasketDto
         {
             Id = basket.Id,
@@ -684,105 +823,10 @@ public class BasketService : IBasketService
             CustomerDiscountName = customerDiscountName,
             Total = basket.Total,
             PromoCode = basket.PromoCode,
-            TotalItems = basket.Items.Sum(i => i.Quantity),
+            TotalItems = basket.Items.Where(i => i.ParentBasketItemId == null).Sum(i => i.Quantity), // Count only root items? Or all? Usually root items (bundles) count as 1
             ExpiresAt = basket.ExpiresAt,
             Notes = basket.Notes,
-            Items = (await Task.WhenAll(basket.Items.Select(async item =>
-            {
-                // Get ingredient names from product's detailed ingredients
-                var productIngredients = item.Product?.DetailedIngredients ?? new List<ProductIngredient>();
-
-                var selectedNames = item.SelectedIngredients?
-                    .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
-                    .ToList();
-
-                var excludedNames = item.ExcludedIngredients?
-                    .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
-                    .ToList();
-
-                var addedNames = item.AddedIngredients?
-                    .Select(id => productIngredients.FirstOrDefault(pi => pi.Id == id)?.Name ?? id.ToString())
-                    .ToList();
-
-                // Deserialize and fetch side items details
-                List<BasketSideItemDto>? selectedSideItems = null;
-                if (!string.IsNullOrEmpty(item.SelectedSideItemsJson))
-                {
-                    try
-                    {
-                        var selectedSides = JsonSerializer.Deserialize<List<SelectedSideItemDto>>(item.SelectedSideItemsJson);
-                        if (selectedSides != null && selectedSides.Count > 0)
-                        {
-                            var sideItemIds = selectedSides.Select(s => s.Id).ToList();
-                            var sideItems = await _context.Products
-                                .Where(p => sideItemIds.Contains(p.Id))
-                                .ToListAsync();
-
-                            selectedSideItems = selectedSides.Select(selectedSide =>
-                            {
-                                var sideItem = sideItems.FirstOrDefault(s => s.Id == selectedSide.Id);
-                                if (sideItem != null)
-                                {
-                                    return new BasketSideItemDto
-                                    {
-                                        Id = sideItem.Id,
-                                        Name = sideItem.Name,
-                                        Description = sideItem.Description,
-                                        Price = sideItem.BasePrice,
-                                        ImageUrl = sideItem.ImageUrl,
-                                        Quantity = selectedSide.Quantity,
-                                        SubTotal = sideItem.BasePrice * selectedSide.Quantity
-                                    };
-                                }
-                                return null;
-                            }).Where(s => s != null).ToList()!;
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to deserialize side items JSON for basket item {BasketItemId}", item.Id);
-                    }
-                }
-
-                // Deserialize ingredient quantities
-                Dictionary<Guid, int>? ingredientQuantities = null;
-                if (!string.IsNullOrEmpty(item.IngredientQuantitiesJson))
-                {
-                    try
-                    {
-                        ingredientQuantities = JsonSerializer.Deserialize<Dictionary<Guid, int>>(item.IngredientQuantitiesJson);
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to deserialize ingredient quantities JSON for basket item {BasketItemId}", item.Id);
-                    }
-                }
-
-                return new BasketItemDto
-                {
-                    Id = item.Id,
-                    ProductId = item.ProductId,
-                    ProductName = item.Product != null ? item.Product.Name : item.Menu?.Name ?? string.Empty,
-                    MenuId = item.MenuId,
-                    ProductDescription = item.Product != null ? item.Product.Description : item.Menu?.Description ?? string.Empty,
-                    ProductImageUrl = item.Product?.ImageUrl ?? string.Empty,
-                    ProductVariationId = item.ProductVariationId,
-                    VariationName = item.ProductVariation?.Name,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    ItemTotal = item.ItemTotal,
-                    SpecialInstructions = item.SpecialInstructions,
-                    SelectedIngredients = item.SelectedIngredients,
-                    ExcludedIngredients = item.ExcludedIngredients,
-                    AddedIngredients = item.AddedIngredients,
-                    IngredientQuantities = ingredientQuantities,
-                    CustomizationPrice = item.CustomizationPrice,
-                    SelectedIngredientNames = selectedNames,
-                    ExcludedIngredientNames = excludedNames,
-                    AddedIngredientNames = addedNames,
-                    SelectedSideItems = selectedSideItems
-                };
-            }))).ToList()
+            Items = rootItems
         };
     }
 

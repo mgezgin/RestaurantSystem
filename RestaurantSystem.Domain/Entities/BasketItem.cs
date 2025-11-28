@@ -27,4 +27,8 @@ public class BasketItem : Entity
     public virtual Product? Product { get; set; } = null!;
     public virtual ProductVariation? ProductVariation { get; set; } = null;
     public virtual Menu? Menu { get; set; } = null!;
+    
+    public Guid? ParentBasketItemId { get; set; }
+    public virtual BasketItem? ParentBasketItem { get; set; }
+    public virtual ICollection<BasketItem> ChildBasketItems { get; set; } = new List<BasketItem>();
 }

@@ -15,5 +15,8 @@ public enum ProductType
     Sauce = 3,
 
     [EnumMember(Value = "addOn")]
-    AddOn = 4
+    AddOn = 4,
+
+    [EnumMember(Value = "menu")]
+    Menu = 5
 }

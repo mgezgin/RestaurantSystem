@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantSystem.Infrastructure.Persistence;
@@ -12,9 +13,11 @@ using RestaurantSystem.Infrastructure.Persistence;
 namespace RestaurantSystem.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251127161415_AddMenuFeature")]
+    partial class AddMenuFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -505,10 +508,6 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("menu_id");
 
-                    b.Property<Guid?>("ParentBasketItemId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("parent_basket_item_id");
-
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
@@ -554,9 +553,6 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("MenuId")
                         .HasDatabaseName("ix_basket_items_menu_id");
-
-                    b.HasIndex("ParentBasketItemId")
-                        .HasDatabaseName("ix_basket_items_parent_basket_item_id");
 
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_basket_items_product_id");
@@ -3265,11 +3261,6 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_basket_items_menus_menu_id");
 
-                    b.HasOne("RestaurantSystem.Domain.Entities.BasketItem", "ParentBasketItem")
-                        .WithMany("ChildBasketItems")
-                        .HasForeignKey("ParentBasketItemId")
-                        .HasConstraintName("fk_basket_items_basket_items_parent_basket_item_id");
-
                     b.HasOne("RestaurantSystem.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
@@ -3285,8 +3276,6 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
                     b.Navigation("Basket");
 
                     b.Navigation("Menu");
-
-                    b.Navigation("ParentBasketItem");
 
                     b.Navigation("Product");
 
@@ -3707,11 +3696,6 @@ namespace RestaurantSystem.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("RestaurantSystem.Domain.Entities.Basket", b =>
                 {
                     b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("RestaurantSystem.Domain.Entities.BasketItem", b =>
-                {
-                    b.Navigation("ChildBasketItems");
                 });
 
             modelBuilder.Entity("RestaurantSystem.Domain.Entities.Category", b =>

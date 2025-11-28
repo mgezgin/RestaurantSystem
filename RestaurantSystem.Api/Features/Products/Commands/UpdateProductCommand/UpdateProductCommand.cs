@@ -29,6 +29,7 @@ public record UpdateProductCommand(
     List<UpdateProductVariationDto>? Variations,
     List<Guid>? SuggestedSideItemIds,
     List<ProductIngredientDto>? DetailedIngredients,
+    MenuDefinitionDto? MenuDefinition,
     ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
@@ -64,6 +65,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             .Include(p => p.SuggestedSideItems)
             .Include(p => p.DetailedIngredients)
                 .ThenInclude(di => di.Descriptions)
+            .Include(p => p.MenuDefinition)
             .FirstOrDefaultAsync(p => p.Id == command.Id, cancellationToken);
 
         if (product == null)
@@ -240,6 +242,89 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     }
                 }
             }
+        
+        // Update Menu Definition
+        if (command.Type == ProductType.Menu && command.MenuDefinition != null)
+        {
+            var menuDef = await _context.MenuDefinitions
+                .Include(m => m.Sections)
+                    .ThenInclude(s => s.Items)
+                .FirstOrDefaultAsync(m => m.ProductId == product.Id, cancellationToken);
+                
+            if (menuDef == null)
+            {
+                // Create new if not exists
+                menuDef = new MenuDefinition
+                {
+                    ProductId = product.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+                _context.MenuDefinitions.Add(menuDef);
+            }
+            
+            // Update properties
+            menuDef.IsAlwaysAvailable = command.MenuDefinition.IsAlwaysAvailable;
+            menuDef.StartTime = command.MenuDefinition.StartTime;
+            menuDef.EndTime = command.MenuDefinition.EndTime;
+            menuDef.AvailableMonday = command.MenuDefinition.AvailableMonday;
+            menuDef.AvailableTuesday = command.MenuDefinition.AvailableTuesday;
+            menuDef.AvailableWednesday = command.MenuDefinition.AvailableWednesday;
+            menuDef.AvailableThursday = command.MenuDefinition.AvailableThursday;
+            menuDef.AvailableFriday = command.MenuDefinition.AvailableFriday;
+            menuDef.AvailableSaturday = command.MenuDefinition.AvailableSaturday;
+            menuDef.AvailableSunday = command.MenuDefinition.AvailableSunday;
+            menuDef.UpdatedAt = DateTime.UtcNow;
+            menuDef.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
+            
+            // Update sections
+            if (command.MenuDefinition.Sections != null)
+            {
+                // Remove existing sections (simplest approach for now, can be optimized)
+                _context.MenuSections.RemoveRange(menuDef.Sections);
+                
+                foreach (var sectionDto in command.MenuDefinition.Sections)
+                {
+                    var section = new MenuSection
+                    {
+                        MenuDefinition = menuDef,
+                        Name = sectionDto.Name,
+                        Description = sectionDto.Description,
+                        DisplayOrder = sectionDto.DisplayOrder,
+                        IsRequired = sectionDto.IsRequired,
+                        MinSelection = sectionDto.MinSelection,
+                        MaxSelection = sectionDto.MaxSelection,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+                    
+                    _context.MenuSections.Add(section);
+                    
+                    if (sectionDto.Items != null)
+                    {
+                        foreach (var itemDto in sectionDto.Items)
+                        {
+                            var item = new MenuSectionItem
+                            {
+                                MenuSection = section,
+                                ProductId = itemDto.ProductId,
+                                AdditionalPrice = itemDto.AdditionalPrice,
+                                DisplayOrder = itemDto.DisplayOrder,
+                                IsDefault = itemDto.IsDefault,
+                                CreatedAt = DateTime.UtcNow,
+                                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                            };
+                            _context.MenuSectionItems.Add(item);
+                        }
+                    }
+                }
+            }
+        }
+        else if (product.MenuDefinition != null && command.Type != ProductType.Menu)
+        {
+            // If type changed from Menu to something else, remove definition
+            _context.MenuDefinitions.Remove(product.MenuDefinition);
+        }
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -251,6 +336,10 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             .Include(p => p.Variations.Where(v => !v.IsDeleted))
             .Include(p => p.SuggestedSideItems)
                 .ThenInclude(si => si.SideItemProduct)
+            .Include(p => p.MenuDefinition)
+                .ThenInclude(md => md!.Sections)
+                    .ThenInclude(s => s.Items)
+                        .ThenInclude(i => i.Product)
             .FirstAsync(p => p.Id == product.Id, cancellationToken);
 
         var handler = new GetProductByIdQueryHandler(_context, _getProductlogger, _configuration);

@@ -27,6 +27,7 @@ public record CreateProductCommand(
     List<CreateProductVariationDto>? Variations,
     List<Guid>? SuggestedSideItemIds,
     List<ProductIngredientDto>? DetailedIngredients,
+    MenuDefinitionDto? MenuDefinition,
     ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
@@ -227,6 +228,68 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                         }
                     }
                 }
+            
+            // Add Menu Definition if type is Menu
+            if (command.Type == ProductType.Menu && command.MenuDefinition != null)
+            {
+                var menuDef = new MenuDefinition
+                {
+                    ProductId = product.Id,
+                    IsAlwaysAvailable = command.MenuDefinition.IsAlwaysAvailable,
+                    StartTime = command.MenuDefinition.StartTime,
+                    EndTime = command.MenuDefinition.EndTime,
+                    AvailableMonday = command.MenuDefinition.AvailableMonday,
+                    AvailableTuesday = command.MenuDefinition.AvailableTuesday,
+                    AvailableWednesday = command.MenuDefinition.AvailableWednesday,
+                    AvailableThursday = command.MenuDefinition.AvailableThursday,
+                    AvailableFriday = command.MenuDefinition.AvailableFriday,
+                    AvailableSaturday = command.MenuDefinition.AvailableSaturday,
+                    AvailableSunday = command.MenuDefinition.AvailableSunday,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                };
+                
+                _context.MenuDefinitions.Add(menuDef);
+                
+                if (command.MenuDefinition.Sections != null)
+                {
+                    foreach (var sectionDto in command.MenuDefinition.Sections)
+                    {
+                        var section = new MenuSection
+                        {
+                            MenuDefinition = menuDef,
+                            Name = sectionDto.Name,
+                            Description = sectionDto.Description,
+                            DisplayOrder = sectionDto.DisplayOrder,
+                            IsRequired = sectionDto.IsRequired,
+                            MinSelection = sectionDto.MinSelection,
+                            MaxSelection = sectionDto.MaxSelection,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                        };
+                        
+                        _context.MenuSections.Add(section);
+                        
+                        if (sectionDto.Items != null)
+                        {
+                            foreach (var itemDto in sectionDto.Items)
+                            {
+                                var item = new MenuSectionItem
+                                {
+                                    MenuSection = section,
+                                    ProductId = itemDto.ProductId,
+                                    AdditionalPrice = itemDto.AdditionalPrice,
+                                    DisplayOrder = itemDto.DisplayOrder,
+                                    IsDefault = itemDto.IsDefault,
+                                    CreatedAt = DateTime.UtcNow,
+                                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                                };
+                                _context.MenuSectionItems.Add(item);
+                            }
+                        }
+                    }
+                }
+            }
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -241,6 +304,10 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                     .ThenInclude(si => si.SideItemProduct)
                 .Include(p => p.DetailedIngredients)
                     .ThenInclude(di => di.Descriptions)
+                .Include(p => p.MenuDefinition)
+                    .ThenInclude(md => md!.Sections)
+                        .ThenInclude(s => s.Items)
+                            .ThenInclude(i => i.Product)
                 .FirstAsync(p => p.Id == product.Id, cancellationToken);
 
             var productDto = MapToProductDto(createdProduct);
@@ -342,6 +409,39 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 IsRequired = si.IsRequired,
                 DisplayOrder = si.DisplayOrder
             }).ToList(),
+            MenuDefinition = product.MenuDefinition != null ? new MenuDefinitionDto
+            {
+                Id = product.MenuDefinition.Id,
+                IsAlwaysAvailable = product.MenuDefinition.IsAlwaysAvailable,
+                StartTime = product.MenuDefinition.StartTime,
+                EndTime = product.MenuDefinition.EndTime,
+                AvailableMonday = product.MenuDefinition.AvailableMonday,
+                AvailableTuesday = product.MenuDefinition.AvailableTuesday,
+                AvailableWednesday = product.MenuDefinition.AvailableWednesday,
+                AvailableThursday = product.MenuDefinition.AvailableThursday,
+                AvailableFriday = product.MenuDefinition.AvailableFriday,
+                AvailableSaturday = product.MenuDefinition.AvailableSaturday,
+                AvailableSunday = product.MenuDefinition.AvailableSunday,
+                Sections = product.MenuDefinition.Sections.Select(s => new MenuSectionDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    DisplayOrder = s.DisplayOrder,
+                    IsRequired = s.IsRequired,
+                    MinSelection = s.MinSelection,
+                    MaxSelection = s.MaxSelection,
+                    Items = s.Items.Select(i => new MenuSectionItemDto
+                    {
+                        Id = i.Id,
+                        ProductId = i.ProductId,
+                        ProductName = i.Product?.Name,
+                        AdditionalPrice = i.AdditionalPrice,
+                        DisplayOrder = i.DisplayOrder,
+                        IsDefault = i.IsDefault
+                    }).OrderBy(i => i.DisplayOrder).ToList()
+                }).OrderBy(s => s.DisplayOrder).ToList()
+            } : null,
             Content = new()
         };
 

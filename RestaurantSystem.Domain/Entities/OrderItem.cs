@@ -7,6 +7,7 @@ public class OrderItem : Entity
     public Guid? ProductId { get; set; }
     public Guid? ProductVariationId { get; set; }
     public Guid? MenuId { get; set; }
+    public Guid? ParentOrderItemId { get; set; }
 
     public string ProductName { get; set; } = null!; // Snapshot at order time
     public string? VariationName { get; set; } // Snapshot at order time
@@ -21,4 +22,6 @@ public class OrderItem : Entity
     public virtual Product? Product { get; set; } = null!;
     public virtual ProductVariation? ProductVariation { get; set; }
     public virtual Menu? Menu { get; set; }
+    public virtual OrderItem? ParentOrderItem { get; set; }
+    public virtual ICollection<OrderItem> ChildOrderItems { get; set; } = new List<OrderItem>();
 }

@@ -29,6 +29,7 @@ public record ProductDto
     public CategoryDto? PrimaryCategory { get; init; }
     public List<ProductVariationDto> Variations { get; init; } = [];
     public List<SideItemDto> SuggestedSideItems { get; init; } = [];
+    public MenuDefinitionDto? MenuDefinition { get; init; }
 
 }
 

@@ -39,4 +39,7 @@ public record BasketItemDto
 
     // Selected side items (with quantities)
     public List<BasketSideItemDto>? SelectedSideItems { get; set; }
+    
+    // For Menu Bundles
+    public List<BasketItemDto>? ChildItems { get; set; }
 }
