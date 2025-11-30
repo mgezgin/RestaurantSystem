@@ -25,7 +25,7 @@ public class GetMenuBundlesQueryHandler(ApplicationDbContext context, IConfigura
             .Include(p => p.MenuDefinition)
             .Include(p => p.Descriptions)
             .Include(p => p.Images)
-            .Where(p => !p.IsDeleted && p.Type == ProductType.Menu);
+            .Where(p => !p.IsDeleted && p.MenuDefinition != null);
 
         var totalCount = await queryable.CountAsync(cancellationToken);
 
