@@ -11,6 +11,7 @@ namespace RestaurantSystem.Api.Features.Products.Queries.GetProductsQuery;
 public record GetProductsQuery(
     Guid? CategoryId,
     ProductType? Type,
+    ProductType? ExcludeType,
     bool? IsActive,
     bool? IsAvailable,
     bool? isSpeacial,
@@ -61,6 +62,16 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
         if (query.Type.HasValue)
         {
             productsQuery = productsQuery.Where(p => p.Type == query.Type.Value);
+        }
+        else
+        {
+            // Default behavior: Exclude Menu bundles unless specifically requested via Type
+            productsQuery = productsQuery.Where(p => p.Type != ProductType.Menu);
+        }
+
+        if (query.ExcludeType.HasValue)
+        {
+            productsQuery = productsQuery.Where(p => p.Type != query.ExcludeType.Value);
         }
 
         if (query.IsActive.HasValue)

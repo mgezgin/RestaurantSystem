@@ -122,8 +122,10 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
                     }
 
                     // Create image record
+                    var imageId = Guid.NewGuid();
                     var productImage = new ProductImage
                     {
+                        Id = imageId,
                         ProductId = command.ProductId,
                         Url = imageUrl,
                         AltText = product.Name,
@@ -137,6 +139,7 @@ public class UploadMultipleProductImagesCommandHandler : ICommandHandler<UploadM
 
                     uploadedImages.Add(new ProductImageDto
                     {
+                        Id = imageId,
                         Url = _baseUrl + "/" + productImage.Url,
                         AltText = productImage.AltText,
                         IsPrimary = productImage.IsPrimary,

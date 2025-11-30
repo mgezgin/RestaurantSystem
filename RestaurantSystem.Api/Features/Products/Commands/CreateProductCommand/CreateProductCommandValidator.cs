@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using RestaurantSystem.Domain.Common.Enums;
 
 namespace RestaurantSystem.Api.Features.Products.Commands.CreateProductCommand;
 
@@ -20,7 +21,8 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
             .GreaterThanOrEqualTo(0).WithMessage("Preparation time cannot be negative");
 
         RuleFor(x => x.Type)
-            .IsInEnum().WithMessage("Invalid product type");
+            .IsInEnum().WithMessage("Invalid product type")
+            .NotEqual(ProductType.Menu).WithMessage("Use CreateMenuBundle API for creating menus");
 
         RuleFor(x => x.DisplayOrder)
             .GreaterThanOrEqualTo(0).WithMessage("Display order cannot be negative");

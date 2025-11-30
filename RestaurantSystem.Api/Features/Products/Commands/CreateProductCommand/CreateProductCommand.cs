@@ -27,7 +27,7 @@ public record CreateProductCommand(
     List<CreateProductVariationDto>? Variations,
     List<Guid>? SuggestedSideItemIds,
     List<ProductIngredientDto>? DetailedIngredients,
-    MenuDefinitionDto? MenuDefinition,
+
     ProductDescriptionsDto Content
 ) : ICommand<ApiResponse<ProductDto>>;
 
@@ -229,67 +229,6 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                     }
                 }
             
-            // Add Menu Definition if type is Menu
-            if (command.Type == ProductType.Menu && command.MenuDefinition != null)
-            {
-                var menuDef = new MenuDefinition
-                {
-                    ProductId = product.Id,
-                    IsAlwaysAvailable = command.MenuDefinition.IsAlwaysAvailable,
-                    StartTime = command.MenuDefinition.StartTime,
-                    EndTime = command.MenuDefinition.EndTime,
-                    AvailableMonday = command.MenuDefinition.AvailableMonday,
-                    AvailableTuesday = command.MenuDefinition.AvailableTuesday,
-                    AvailableWednesday = command.MenuDefinition.AvailableWednesday,
-                    AvailableThursday = command.MenuDefinition.AvailableThursday,
-                    AvailableFriday = command.MenuDefinition.AvailableFriday,
-                    AvailableSaturday = command.MenuDefinition.AvailableSaturday,
-                    AvailableSunday = command.MenuDefinition.AvailableSunday,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                };
-                
-                _context.MenuDefinitions.Add(menuDef);
-                
-                if (command.MenuDefinition.Sections != null)
-                {
-                    foreach (var sectionDto in command.MenuDefinition.Sections)
-                    {
-                        var section = new MenuSection
-                        {
-                            MenuDefinition = menuDef,
-                            Name = sectionDto.Name,
-                            Description = sectionDto.Description,
-                            DisplayOrder = sectionDto.DisplayOrder,
-                            IsRequired = sectionDto.IsRequired,
-                            MinSelection = sectionDto.MinSelection,
-                            MaxSelection = sectionDto.MaxSelection,
-                            CreatedAt = DateTime.UtcNow,
-                            CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                        };
-                        
-                        _context.MenuSections.Add(section);
-                        
-                        if (sectionDto.Items != null)
-                        {
-                            foreach (var itemDto in sectionDto.Items)
-                            {
-                                var item = new MenuSectionItem
-                                {
-                                    MenuSection = section,
-                                    ProductId = itemDto.ProductId,
-                                    AdditionalPrice = itemDto.AdditionalPrice,
-                                    DisplayOrder = itemDto.DisplayOrder,
-                                    IsDefault = itemDto.IsDefault,
-                                    CreatedAt = DateTime.UtcNow,
-                                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                                };
-                                _context.MenuSectionItems.Add(item);
-                            }
-                        }
-                    }
-                }
-            }
             }
 
             await _context.SaveChangesAsync(cancellationToken);
