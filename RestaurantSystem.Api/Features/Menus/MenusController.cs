@@ -39,6 +39,7 @@ public class MenusController : ControllerBase
     /// Get all menu bundles with pagination
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<PagedResult<MenuBundleDto>>>> GetMenuBundles(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)

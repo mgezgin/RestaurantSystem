@@ -42,15 +42,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
             .Include(p => p.Descriptions)
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
-            .Include(p => p.Variations)
-            .Include(p => p.SuggestedSideItems)
-                .ThenInclude(si => si.SideItemProduct)
-                    .ThenInclude(sip => sip.Images)
-            .Include(p => p.DetailedIngredients.Where(di => di.IsActive).OrderBy(di => di.DisplayOrder))
-                .ThenInclude(di => di.Descriptions)
-            .Include(p => p.DetailedIngredients)
-                .ThenInclude(di => di.GlobalIngredient)
-                    .ThenInclude(gi => gi!.Translations)
+            .Include(p => p.Variations.Where(v => v.IsActive))
             .AsQueryable();
 
         // Apply filters
@@ -94,10 +86,8 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
             var searchLower = query.Search.ToLower();
 
             productsQuery = productsQuery.Where(p=>p.Name.ToLower().Contains(searchLower) || p.Descriptions.Any(c => c.Name.ToLower().Contains(searchLower)));
-            //productsQuery = productsQuery.Where(p =>
-            //    p.Name.ToLower().Contains(searchLower) ||
-            //    p.Description != null && p.Description.ToLower().Contains(searchLower));
         }
+
 
         // Get total count
         var totalCount = await productsQuery.CountAsync(cancellationToken);
@@ -124,47 +114,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                 Type = p.Type,
                 Allergens = p.Allergens,
                 Ingredients = p.Ingredients,
-                DetailedIngredients = p.DetailedIngredients
-                    .Select(di => {
-                        // Start with global translations if available
-                        var content = new Dictionary<string, ProductIngredientContentDto>();
-                        
-                        if (di.GlobalIngredient != null)
-                        {
-                            foreach (var trans in di.GlobalIngredient.Translations)
-                            {
-                                content[trans.LanguageCode] = new ProductIngredientContentDto
-                                {
-                                    Name = trans.Name,
-                                    Description = null
-                                };
-                            }
-                        }
-
-                        // Override with specific descriptions
-                        foreach (var desc in di.Descriptions)
-                        {
-                            content[desc.LanguageCode] = new ProductIngredientContentDto
-                            {
-                                Name = desc.Name,
-                                Description = desc.Description
-                            };
-                        }
-
-                        return new ProductIngredientDto
-                        {
-                            Id = di.Id,
-                            Name = di.Name,
-                            IsOptional = di.IsOptional,
-                            Price = di.Price,
-                            IsIncludedInBasePrice = di.IsIncludedInBasePrice,
-                            IsActive = di.IsActive,
-                            DisplayOrder = di.DisplayOrder,
-                            MaxQuantity = di.MaxQuantity,
-                            Content = content
-                        };
-                    })
-                    .ToList(),
+                DetailedIngredients = new List<ProductIngredientDto>(),
                 Images = p.Images.Select(s => new ProductImageDto
                 {
                     Id = s.Id,
@@ -192,30 +142,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                         DisplayOrder = v.DisplayOrder
                     })
                     .ToList(),
-                SuggestedSideItems = p.SuggestedSideItems
-                    .Where(si => si.SideItemProduct != null)
-                    .OrderBy(si => si.DisplayOrder)
-                    .Select(si => new SideItemDto
-                    {
-                        Id = si.SideItemProduct.Id,
-                        Name = si.SideItemProduct.Name,
-                        Description = si.SideItemProduct.Description,
-                        Price = si.SideItemProduct.BasePrice,
-                        IsRequired = si.IsRequired,
-                        DisplayOrder = si.DisplayOrder,
-                        Images = si.SideItemProduct.Images
-                            .Select(i => new ProductImageDto
-                            {
-                                Id = i.Id,
-                                Url = _baseUrl + "/" + i.Url,
-                                AltText = i.AltText,
-                                IsPrimary = i.IsPrimary,
-                                SortOrder = i.SortOrder,
-                                ProductId = i.ProductId
-                            })
-                            .ToList()
-                    })
-                    .ToList(),
+                SuggestedSideItems = new List<SideItemDto>(),
                 Content = new() // Initialize Content dictionary
             };
 

@@ -114,20 +114,34 @@ public class BasketService : IBasketService
                 foreach (var section in product.MenuDefinition.Sections)
                 {
                     var sectionSelections = selectedOptions.Where(o => o.SectionId == section.Id).ToList();
-                    var totalQuantity = sectionSelections.Sum(o => o.Quantity);
                     
-                    if (section.IsRequired && totalQuantity < section.MinSelection)
+                    // Count distinct items, not sum of quantities
+                    var distinctItemCount = sectionSelections.Count;
+                    
+                    // Log for debugging
+                    _logger.LogInformation(
+                        "Section '{SectionName}' validation: {ItemCount} items selected (min: {Min}, max: {Max})",
+                        section.Name, distinctItemCount, section.MinSelection, section.MaxSelection
+                    );
+                    
+                    if (section.IsRequired && distinctItemCount < section.MinSelection)
                     {
                         throw new InvalidOperationException($"Section '{section.Name}' requires at least {section.MinSelection} selection(s)");
                     }
                     
-                    if (totalQuantity > section.MaxSelection)
+                    if (distinctItemCount > section.MaxSelection)
                     {
                         throw new InvalidOperationException($"Section '{section.Name}' allows at most {section.MaxSelection} selection(s)");
                     }
                     
                     foreach (var selection in sectionSelections)
                     {
+                        // Validate individual selection
+                        if (selection.Quantity < 1)
+                        {
+                            throw new InvalidOperationException($"Invalid quantity for item in section '{section.Name}'");
+                        }
+                        
                         var sectionItem = section.Items.FirstOrDefault(i => i.ProductId == selection.ItemId);
                         if (sectionItem == null)
                             throw new InvalidOperationException($"Item not found in section '{section.Name}'");

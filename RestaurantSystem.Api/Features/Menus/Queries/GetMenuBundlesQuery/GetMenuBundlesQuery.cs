@@ -23,9 +23,46 @@ public class GetMenuBundlesQueryHandler(ApplicationDbContext context, IConfigura
     {
         var queryable = _context.Products
             .Include(p => p.MenuDefinition)
+                .ThenInclude(md => md.Sections)
+                    .ThenInclude(s => s.Items)
+                        .ThenInclude(i => i.Product)
+                            .ThenInclude(p => p.DetailedIngredients)
+                                .ThenInclude(di => di.Descriptions)
+            .Include(p => p.MenuDefinition)
+                .ThenInclude(md => md.Sections)
+                    .ThenInclude(s => s.Items)
+                        .ThenInclude(i => i.Product)
+                            .ThenInclude(p => p.SuggestedSideItems)
+                                .ThenInclude(si => si.SideItemProduct)
             .Include(p => p.Descriptions)
             .Include(p => p.Images)
             .Where(p => !p.IsDeleted && p.MenuDefinition != null);
+
+        // Filter by schedule availability
+        var now = DateTime.UtcNow;
+        var currentDayOfWeek = now.DayOfWeek;
+        var currentTime = now.TimeOfDay;
+
+        queryable = queryable.Where(p =>
+            p.MenuDefinition.IsAlwaysAvailable || // Include if always available
+            (
+                // Check if available on current day
+                (currentDayOfWeek == DayOfWeek.Monday && p.MenuDefinition.AvailableMonday) ||
+                (currentDayOfWeek == DayOfWeek.Tuesday && p.MenuDefinition.AvailableTuesday) ||
+                (currentDayOfWeek == DayOfWeek.Wednesday && p.MenuDefinition.AvailableWednesday) ||
+                (currentDayOfWeek == DayOfWeek.Thursday && p.MenuDefinition.AvailableThursday) ||
+                (currentDayOfWeek == DayOfWeek.Friday && p.MenuDefinition.AvailableFriday) ||
+                (currentDayOfWeek == DayOfWeek.Saturday && p.MenuDefinition.AvailableSaturday) ||
+                (currentDayOfWeek == DayOfWeek.Sunday && p.MenuDefinition.AvailableSunday)
+            ) &&
+            (
+                // Check if within time range (if times are set)
+                (p.MenuDefinition.StartTime == null && p.MenuDefinition.EndTime == null) ||
+                (p.MenuDefinition.StartTime != null && p.MenuDefinition.EndTime != null &&
+                 currentTime >= p.MenuDefinition.StartTime && currentTime <= p.MenuDefinition.EndTime)
+            )
+        );
+
 
         var totalCount = await queryable.CountAsync(cancellationToken);
 
@@ -79,6 +116,62 @@ public class GetMenuBundlesQueryHandler(ApplicationDbContext context, IConfigura
                 AvailableFriday = product.MenuDefinition.AvailableFriday,
                 AvailableSaturday = product.MenuDefinition.AvailableSaturday,
                 AvailableSunday = product.MenuDefinition.AvailableSunday,
+                Sections = product.MenuDefinition.Sections.OrderBy(s => s.DisplayOrder).Select(s => new MenuSectionDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    DisplayOrder = s.DisplayOrder,
+                    IsRequired = s.IsRequired,
+                    MinSelection = s.MinSelection,
+                    MaxSelection = s.MaxSelection,
+                    Items = s.Items.OrderBy(i => i.DisplayOrder).Select(i => new MenuSectionItemDto
+                    {
+                        Id = i.Id,
+                        ProductId = i.ProductId,
+                        ProductName = i.Product?.Name,
+                        AdditionalPrice = i.AdditionalPrice,
+                        DisplayOrder = i.DisplayOrder,
+                        IsDefault = i.IsDefault,
+                        Ingredients = i.Product != null ? (i.Product.DetailedIngredients.Any() 
+                            ? i.Product.DetailedIngredients.Where(di => di.IsActive).Select(di => di.Name).ToList() 
+                            : i.Product.Ingredients) : null,
+                        Allergens = i.Product?.Allergens,
+                        DetailedIngredients = i.Product?.DetailedIngredients
+                            .Where(di => di.IsActive)
+                            .OrderBy(di => di.DisplayOrder)
+                            .Select(di => new ProductIngredientDto
+                            {
+                                Id = di.Id,
+                                Name = di.Name,
+                                IsOptional = di.IsOptional,
+                                Price = di.Price,
+                                IsIncludedInBasePrice = di.IsIncludedInBasePrice,
+                                IsActive = di.IsActive,
+                                DisplayOrder = di.DisplayOrder,
+                                MaxQuantity = di.MaxQuantity,
+                                Content = di.Descriptions?.ToDictionary(
+                                    desc => desc.LanguageCode,
+                                    desc => new ProductIngredientContentDto
+                                    {
+                                        Name = desc.Name,
+                                        Description = desc.Description
+                                    }
+                                )
+                            }).ToList(),
+                        SuggestedSideItems = i.Product?.SuggestedSideItems
+                            .OrderBy(si => si.DisplayOrder)
+                            .Select(si => new SuggestedSideItemDto
+                            {
+                                Id = si.Id,
+                                SideItemProductId = si.SideItemProductId,
+                                SideItemProductName = si.SideItemProduct?.Name,
+                                SideItemBasePrice = si.SideItemProduct?.BasePrice ?? 0,
+                                IsRequired = si.IsRequired,
+                                DisplayOrder = si.DisplayOrder
+                            }).ToList()
+                    }).ToList()
+                }).ToList()
             } : null,
             Content = new(),
             Images = product.Images.Select(i => new RestaurantSystem.Api.Features.Products.Dtos.ProductImageDto

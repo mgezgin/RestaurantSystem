@@ -74,4 +74,37 @@ public class MenuSectionItemDto
     public decimal AdditionalPrice { get; set; }
     public int DisplayOrder { get; set; }
     public bool IsDefault { get; set; }
+    public List<string>? Ingredients { get; set; }
+    public List<string>? Allergens { get; set; }
+    public List<ProductIngredientDto>? DetailedIngredients { get; set; }
+    public List<SuggestedSideItemDto>? SuggestedSideItems { get; set; }
+}
+
+public class ProductIngredientDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public bool IsOptional { get; set; }
+    public decimal Price { get; set; }
+    public bool IsIncludedInBasePrice { get; set; }
+    public bool IsActive { get; set; }
+    public int DisplayOrder { get; set; }
+    public int MaxQuantity { get; set; }
+    public Dictionary<string, ProductIngredientContentDto>? Content { get; set; }
+}
+
+public class ProductIngredientContentDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+}
+
+public class SuggestedSideItemDto
+{
+    public Guid Id { get; set; }
+    public Guid SideItemProductId { get; set; }
+    public string? SideItemProductName { get; set; }
+    public decimal SideItemBasePrice { get; set; }
+    public bool IsRequired { get; set; }
+    public int DisplayOrder { get; set; }
 }

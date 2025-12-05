@@ -8,4 +8,6 @@ public record MenuSectionItemDto
     public decimal AdditionalPrice { get; init; }
     public int DisplayOrder { get; init; }
     public bool IsDefault { get; init; }
+    public List<string>? Ingredients { get; init; }
+    public List<string>? Allergens { get; init; }
 }
