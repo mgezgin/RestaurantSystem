@@ -10,5 +10,5 @@ public enum OrderStatus
     Completed = 7,
     Cancelled = 8,
     Refunded = 9,
-    PendingCustomerApproval = 10
+    PendingApproval = 10
 }

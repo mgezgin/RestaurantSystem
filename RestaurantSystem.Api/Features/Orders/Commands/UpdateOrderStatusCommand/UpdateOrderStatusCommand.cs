@@ -129,7 +129,7 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
                     order.EstimatedDeliveryTime = DateTime.UtcNow.AddMinutes(45);
                 }
                 break;
-            case OrderStatus.PendingCustomerApproval:
+            case OrderStatus.PendingApproval:
                 // Send delayed order email with approval options
                 if (!string.IsNullOrEmpty(order.CustomerEmail))
                 {
@@ -183,8 +183,8 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
     {
         return currentStatus switch
         {
-            OrderStatus.Pending => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled or OrderStatus.PendingCustomerApproval,
-            OrderStatus.PendingCustomerApproval => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled,
+            OrderStatus.Pending => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled or OrderStatus.PendingApproval,
+            OrderStatus.PendingApproval => newStatus is OrderStatus.Confirmed or OrderStatus.Cancelled,
             OrderStatus.Confirmed => newStatus is OrderStatus.Preparing or OrderStatus.Cancelled,
             OrderStatus.Preparing => newStatus is OrderStatus.Ready or OrderStatus.Cancelled,
             OrderStatus.Ready => newStatus is OrderStatus.OutForDelivery or OrderStatus.Completed or OrderStatus.Cancelled,

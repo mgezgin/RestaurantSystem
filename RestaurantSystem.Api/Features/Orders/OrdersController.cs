@@ -305,36 +305,55 @@ public class OrdersController : ControllerBase
                     </html>", "text/html");
             }
 
-            // Update order status to Confirmed
+            // Define delay threshold - orders with prep time > this need customer approval
+            const int delayThresholdMinutes = 10;
+            
+            // Determine status based on preparation time
+            // If delay is significant, ask customer for approval first
+            var newStatus = minutes > delayThresholdMinutes 
+                ? Domain.Common.Enums.OrderStatus.PendingApproval 
+                : Domain.Common.Enums.OrderStatus.Confirmed;
+            
+            var statusNote = minutes > delayThresholdMinutes
+                ? $"Pending customer approval for {minutes} min preparation time"
+                : $"Confirmed via email with {minutes} min preparation time";
+
+            // Update order status
             var command = new UpdateOrderStatusCommand
             {
                 OrderId = order.Id,
-                NewStatus = Domain.Common.Enums.OrderStatus.Confirmed,
+                NewStatus = newStatus,
                 EstimatedPreparationMinutes = minutes,
-                Notes = $"Confirmed via email with {minutes} min preparation time"
+                Notes = statusNote
             };
 
             var result = await _mediator.SendCommand(command);
 
             if (result.Success)
             {
+                // Different messages based on whether it's immediate confirmation or pending approval
+                var (title, icon, color, heading, message) = minutes > delayThresholdMinutes
+                    ? ("Pending Customer Approval", "⏳", "#f59e0b", "Awaiting Customer Approval", 
+                       $"Order <strong>{orderNumber}</strong> requires customer approval for the {minutes}-minute preparation time.<br><br>The customer will receive an email to approve or reject this delay.")
+                    : ("Order Confirmed", "✓", "#059669", "Order Confirmed!", 
+                       $"Order <strong>{orderNumber}</strong> has been confirmed.<br><br>Preparation time: <strong>{minutes} minutes</strong>");
+
                 return Content($@"
                     <html>
                     <head>
-                        <title>Order Confirmed</title>
-                        <meta http-equiv='refresh' content='3;url=http://localhost:3000/admin/orders-management'>
+                        <title>{title}</title>
+                        <meta http-equiv='refresh' content='5;url=http://localhost:3000/admin/orders-management'>
                     </head>
                     <body style='font-family: Arial; text-align: center; padding: 50px;'>
                         <div style='max-width: 500px; margin: 0 auto;'>
-                            <div style='font-size: 60px; color: #059669; margin-bottom: 20px;'>✓</div>
-                            <h2 style='color: #059669;'>Order Confirmed!</h2>
-                            <p>Order <strong>{orderNumber}</strong> has been confirmed.</p>
-                            <p>Preparation time: <strong>{minutes} minutes</strong></p>
+                            <div style='font-size: 60px; color: {color}; margin-bottom: 20px;'>{icon}</div>
+                            <h2 style='color: {color};'>{heading}</h2>
+                            <p>{message}</p>
                             <p style='color: #666; font-size: 14px; margin-top: 30px;'>
-                                The customer will receive a confirmation email shortly.
+                                The customer will be notified automatically.
                             </p>
                             <p style='color: #666; font-size: 12px; margin-top: 20px;'>
-                                Redirecting to dashboard in 3 seconds...
+                                Redirecting to dashboard in 5 seconds...
                             </p>
                         </div>
                     </body>

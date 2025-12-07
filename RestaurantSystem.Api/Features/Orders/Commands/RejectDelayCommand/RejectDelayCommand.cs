@@ -48,7 +48,7 @@ public class RejectDelayCommandHandler : ICommandHandler<RejectDelayCommand, Api
             return ApiResponse<OrderDto>.Failure("Order not found");
         }
 
-        if (order.Status != OrderStatus.PendingCustomerApproval)
+        if (order.Status != OrderStatus.PendingApproval)
         {
             return ApiResponse<OrderDto>.Failure("Order is not pending approval");
         }

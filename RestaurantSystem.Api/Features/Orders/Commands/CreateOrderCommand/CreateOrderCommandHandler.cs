@@ -397,7 +397,6 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
             // Map to DTO
             var orderDto = await _mappingService.MapToOrderDtoAsync(order, cancellationToken);
 
-            _logger.LogInformation("Sending kitchen notification for order {OrderNumber}", order.OrderNumber);
             await _orderEventService.NotifyOrderCreated(orderDto);
 
             if (order.IsFocusOrder)
@@ -405,64 +404,9 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 await _orderEventService.NotifyFocusOrderUpdate(orderDto);
             }
 
-            // Send emails
-            try
-            {
-                // 1. Send Order Received email to customer
-                if (!string.IsNullOrEmpty(order.CustomerEmail))
-                {
-                    var orderItems = order.Items.Select(i => (i.ProductName, i.Quantity, i.ItemTotal));
-                    
-                    // Format delivery address if it exists
-                    string? deliveryAddressStr = null;
-                    if (order.DeliveryAddress != null)
-                    {
-                        deliveryAddressStr = $"{order.DeliveryAddress.AddressLine1}, {order.DeliveryAddress.PostalCode} {order.DeliveryAddress.City}";
-                    }
-
-                    await _emailService.SendOrderReceivedEmailAsync(
-                        order.CustomerEmail,
-                        order.CustomerName ?? "Customer",
-                        order.OrderNumber,
-                        order.Type.ToString(),
-                        order.Total,
-                        orderItems,
-                        order.Notes,
-                        deliveryAddressStr
-                    );
-                }
-
-                // 2. Send New Order notification to Admin
-                if (!string.IsNullOrEmpty(_emailSettings.AdminEmail))
-                {
-                    var orderItems = order.Items.Select(i => (i.ProductName, i.Quantity, i.ItemTotal));
-                    
-                    // Format delivery address if it exists
-                    string? deliveryAddressStr = null;
-                    if (order.DeliveryAddress != null)
-                    {
-                        deliveryAddressStr = $"{order.DeliveryAddress.AddressLine1}, {order.DeliveryAddress.PostalCode} {order.DeliveryAddress.City}";
-                    }
-
-                    await _emailService.SendOrderConfirmationAdminEmailAsync(
-                        _emailSettings.AdminEmail,
-                        order.OrderNumber,
-                        order.CustomerName ?? "Guest",
-                        order.CustomerEmail ?? "N/A",
-                        order.CustomerPhone ?? "N/A",
-                        order.Type.ToString(),
-                        order.Total,
-                        orderItems,
-                        order.Notes,
-                        deliveryAddressStr
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                // Don't fail the request if email sending fails, just log it
-                _logger.LogError(ex, "Failed to send order emails for order {OrderNumber}", order.OrderNumber);
-            }
+            // NOTE: Email sending has been moved to the explicit /send-confirmation-email endpoint
+            // This prevents duplicate emails and gives the frontend control over when emails are sent
+            // The frontend calls this endpoint after successful order creation
 
             _logger.LogInformation("Order {OrderNumber} created successfully by user {UserId}",
                 order.OrderNumber, _currentUserService.UserId);
