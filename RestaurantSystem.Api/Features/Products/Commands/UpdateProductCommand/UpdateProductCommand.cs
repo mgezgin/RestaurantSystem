@@ -62,6 +62,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         var product = await _context.Products
             .Include(p => p.ProductCategories)
             .Include(p => p.Variations)
+                .ThenInclude(v => v.Descriptions)
             .Include(p => p.SuggestedSideItems)
             .Include(p => p.DetailedIngredients)
                 .ThenInclude(di => di.Descriptions)
@@ -174,6 +175,25 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                     CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                 };
                 await _context.ProductVariations.AddAsync(variation, cancellationToken);
+                
+                if (variationDto.Content != null)
+                {
+                    foreach (var (languageCode, content) in variationDto.Content)
+                    {
+                         if (string.IsNullOrWhiteSpace(content.Name)) continue;
+
+                         var description = new ProductVariationDescription
+                         {
+                             ProductVariation = variation, 
+                             LanguageCode = languageCode,
+                             Name = content.Name,
+                             Description = content.Description,
+                             CreatedAt = DateTime.UtcNow,
+                             CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                         };
+                         await _context.ProductVariationDescriptions.AddAsync(description, cancellationToken);
+                    }
+                }
             }
         }
 
@@ -350,4 +370,14 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
 
         return result;
     }
-}
+    }
+
+
+public record UpdateProductVariationDto(
+    string Name,
+    string? Description,
+    decimal PriceModifier,
+    bool IsActive,
+    int DisplayOrder,
+    Dictionary<string, ProductVariationContentDto>? Content
+);

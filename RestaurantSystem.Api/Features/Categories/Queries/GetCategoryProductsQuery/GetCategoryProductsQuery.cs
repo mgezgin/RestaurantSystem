@@ -40,6 +40,9 @@ public class GetCategoryProductsQueryHandler : IQueryHandler<GetCategoryProducts
         var productsQuery = _context.ProductCategories
             .Include(pc => pc.Product)
                 .ThenInclude(p => p.Images)
+            .Include(pc => pc.Product)
+                .ThenInclude(p => p.Variations)
+                    .ThenInclude(v => v.Descriptions)
             .Where(pc => pc.CategoryId == query.CategoryId && !pc.Product.IsDeleted)
             .AsQueryable();
 
@@ -74,7 +77,29 @@ public class GetCategoryProductsQueryHandler : IQueryHandler<GetCategoryProducts
                 }).ToList(),
                 IsAvailable = pc.Product.IsAvailable,
                 IsPrimaryCategory = pc.IsPrimary,
-                PreparationTimeMinutes = pc.Product.PreparationTimeMinutes
+                PreparationTimeMinutes = pc.Product.PreparationTimeMinutes,
+                Variations = pc.Product.Variations
+                    .OrderBy(v => v.DisplayOrder)
+                    .Select(v => new ProductVariationDto
+                    {
+                        Id = v.Id,
+                        Name = v.Name,
+                        Description = v.Description,
+                        PriceModifier = v.PriceModifier,
+                        IsActive = v.IsActive,
+                        DisplayOrder = v.DisplayOrder,
+                        Content = v.Descriptions
+                            .GroupBy(d => d.LanguageCode)
+                            .Select(g => g.First())
+                            .ToDictionary(
+                                d => d.LanguageCode,
+                                d => new ProductVariationContentDto
+                                {
+                                    Name = d.Name,
+                                    Description = d.Description
+                                }
+                            )
+                    }).ToList()
             })
             .ToListAsync(cancellationToken);
 

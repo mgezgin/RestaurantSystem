@@ -14,4 +14,5 @@ public class ProductVariation : SoftDeleteEntity
 
     // Navigation properties
     public virtual Product Product { get; set; } = null!;
+    public virtual ICollection<ProductVariationDescription> Descriptions { get; set; } = [];
 }

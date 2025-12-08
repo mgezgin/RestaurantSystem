@@ -34,6 +34,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations.OrderBy(v => v.DisplayOrder))
+                .ThenInclude(v => v.Descriptions)
             .Include(p => p.DetailedIngredients.Where(di => di.IsActive).OrderBy(di => di.DisplayOrder))
                 .ThenInclude(di => di.Descriptions)
             .Include(p => p.DetailedIngredients)
@@ -149,7 +150,19 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Api
                     PriceModifier = v.PriceModifier,
                     FinalPrice = product.BasePrice + v.PriceModifier,
                     IsActive = v.IsActive,
-                    DisplayOrder = v.DisplayOrder
+
+                    DisplayOrder = v.DisplayOrder,
+                    Content = v.Descriptions
+                        .GroupBy(d => d.LanguageCode)
+                        .Select(g => g.First())
+                        .ToDictionary(
+                            d => d.LanguageCode,
+                            d => new ProductVariationContentDto
+                            {
+                                Name = d.Name,
+                                Description = d.Description
+                            }
+                        )
                 })
                 .ToList(),
                 SuggestedSideItems = product.SuggestedSideItems

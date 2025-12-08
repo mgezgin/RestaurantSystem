@@ -36,7 +36,8 @@ public record CreateProductVariationDto(
     string? Description,
     decimal PriceModifier,
     bool IsActive,
-    int DisplayOrder
+    int DisplayOrder,
+    Dictionary<string, ProductVariationContentDto>? Content
 );
 
 public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand, ApiResponse<ProductDto>>
@@ -159,6 +160,26 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                     };
                     _context.ProductVariations.Add(variation);
                     product.Variations.Add(variation);
+
+                    if (variationDto.Content != null)
+                    {
+                        foreach (var (languageCode, content) in variationDto.Content)
+                        {
+                            if (string.IsNullOrWhiteSpace(content.Name)) continue;
+
+                            var description = new ProductVariationDescription
+                            {
+                                ProductVariation = variation,
+                                LanguageCode = languageCode,
+                                Name = content.Name,
+                                Description = content.Description,
+                                CreatedAt = DateTime.UtcNow,
+                                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                            };
+                            _context.ProductVariationDescriptions.Add(description);
+                            variation.Descriptions.Add(description);
+                        }
+                    }
                 }
             }
 
@@ -239,6 +260,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 .Include(p => p.ProductCategories)
                     .ThenInclude(pc => pc.Category)
                 .Include(p => p.Variations)
+                    .ThenInclude(v => v.Descriptions)
                 .Include(p => p.SuggestedSideItems)
                     .ThenInclude(si => si.SideItemProduct)
                 .Include(p => p.DetailedIngredients)
@@ -337,7 +359,18 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
                 PriceModifier = v.PriceModifier,
                 FinalPrice = product.BasePrice + v.PriceModifier,
                 IsActive = v.IsActive,
-                DisplayOrder = v.DisplayOrder
+                DisplayOrder = v.DisplayOrder,
+                Content = v.Descriptions
+                    .GroupBy(d => d.LanguageCode)
+                    .Select(g => g.First())
+                    .ToDictionary(
+                        d => d.LanguageCode,
+                        d => new ProductVariationContentDto
+                        {
+                            Name = d.Name,
+                            Description = d.Description
+                        }
+                    )
             }).ToList(),
             SuggestedSideItems = product.SuggestedSideItems.Select(si => new SideItemDto
             {

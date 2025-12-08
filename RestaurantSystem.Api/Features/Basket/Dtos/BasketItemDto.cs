@@ -42,4 +42,9 @@ public record BasketItemDto
     
     // For Menu Bundles
     public List<BasketItemDto>? ChildItems { get; set; }
+
+    // Multilingual support
+    public Dictionary<string, BasketItemVariationContentDto>? VariationContent { get; set; }
 }
+
+public record BasketItemVariationContentDto(string Name, string? Description);

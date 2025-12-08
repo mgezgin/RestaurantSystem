@@ -12,4 +12,5 @@ public record CategoryProductDto
     public bool IsAvailable { get; init; }
     public bool IsPrimaryCategory { get; init; }
     public int PreparationTimeMinutes { get; init; }
+    public List<ProductVariationDto> Variations { get; init; } = new();
 }

@@ -666,6 +666,7 @@ public class BasketService : IBasketService
                     .ThenInclude(p => p.DetailedIngredients)
             .Include(b => b.Items)
                 .ThenInclude(bi => bi.ProductVariation)
+                    .ThenInclude(pv => pv!.Descriptions)
             .Include(b => b.Items)
                 .ThenInclude(bi => bi.Menu)
                 .ThenInclude(b => b.MenuItems)
@@ -792,6 +793,10 @@ public class BasketService : IBasketService
                 ProductImageUrl = item.Product?.ImageUrl ?? string.Empty,
                 ProductVariationId = item.ProductVariationId,
                 VariationName = item.ProductVariation?.Name,
+                VariationContent = item.ProductVariation?.Descriptions?.ToDictionary(
+                    d => d.LanguageCode,
+                    d => new BasketItemVariationContentDto(d.Name, d.Description)
+                ),
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,
                 ItemTotal = item.ItemTotal,

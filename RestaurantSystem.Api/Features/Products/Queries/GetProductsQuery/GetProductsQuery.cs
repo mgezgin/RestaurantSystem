@@ -43,6 +43,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
             .Include(p => p.Variations.Where(v => v.IsActive))
+                .ThenInclude(v => v.Descriptions)
             .AsQueryable();
 
         // Apply filters
@@ -139,7 +140,18 @@ public class GetProductsQueryHandler : IQueryHandler<GetProductsQuery, ApiRespon
                         Description = v.Description,
                         PriceModifier = v.PriceModifier,
                         IsActive = v.IsActive,
-                        DisplayOrder = v.DisplayOrder
+                        DisplayOrder = v.DisplayOrder,
+                        Content = v.Descriptions
+                            .GroupBy(d => d.LanguageCode)
+                            .Select(g => g.First())
+                            .ToDictionary(
+                                d => d.LanguageCode,
+                                d => new ProductVariationContentDto
+                                {
+                                    Name = d.Name,
+                                    Description = d.Description
+                                }
+                            )
                     })
                     .ToList(),
                 SuggestedSideItems = new List<SideItemDto>(),
