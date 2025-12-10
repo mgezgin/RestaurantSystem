@@ -493,6 +493,25 @@ Thank you for being a valued member!";
         }
     }
 
+    public async Task SendAccountDeletionEmailAsync(string toEmail, string firstName, string lastName, string deleteUrl, string cancelUrl, DateTime scheduledDeletionDate)
+    {
+        try
+        {
+            var subject = EmailTemplates.AccountDeletion.Subject;
+            var htmlBody = EmailTemplates.AccountDeletion.GetHtmlBody(firstName, lastName, deleteUrl, cancelUrl, scheduledDeletionDate);
+            var textBody = EmailTemplates.AccountDeletion.GetTextBody(firstName, lastName, deleteUrl, cancelUrl, scheduledDeletionDate);
+
+            await SendEmailAsync(toEmail, subject, htmlBody, textBody);
+
+            _logger.LogInformation("Account deletion email sent to {Email}", toEmail);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send account deletion email to {Email}", toEmail);
+            throw;
+        }
+    }
+
     private async Task SendEmailWithEmbeddedImageAsync(
         string to,
         string subject,

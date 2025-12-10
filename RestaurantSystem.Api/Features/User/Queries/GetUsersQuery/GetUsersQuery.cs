@@ -28,7 +28,7 @@ public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<
 
     public async Task<ApiResponse<PagedResult<UserDto>>> Handle(GetUsersQuery query, CancellationToken cancellationToken)
     {
-        var userQuery = _context.Users.AsQueryable();
+        var userQuery = _context.Users.IgnoreQueryFilters().AsQueryable();
 
         if (query.Role != null)
         {
@@ -43,7 +43,11 @@ public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var searchLower = query.Search.ToLower();
-            userQuery = userQuery.Where(u => u.FirstName.ToLower().Contains(searchLower));
+            userQuery = userQuery.Where(u => 
+                u.FirstName.ToLower().Contains(searchLower) ||
+                u.LastName.ToLower().Contains(searchLower) ||
+                u.Email.ToLower().Contains(searchLower) ||
+                (u.FirstName + " " + u.LastName).ToLower().Contains(searchLower));
         }
 
         // Get total count
@@ -59,7 +63,17 @@ public class GetProductsQueryHandler : IQueryHandler<GetUsersQuery, ApiResponse<
                 Email = u.Email ?? string.Empty,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
+                PhoneNumber = u.PhoneNumber,
                 Role = u.Role.ToString(),
+                IsEmailConfirmed = u.EmailConfirmed,
+                CreatedAt = u.CreatedAt,
+                UpdatedAt = u.UpdatedAt,
+                IsDeleted = u.IsDeleted,
+                DeletedAt = u.DeletedAt,
+                Metadata = u.Metadata ?? new Dictionary<string, string>(),
+                OrderLimitAmount = u.OrderLimitAmount,
+                DiscountPercentage = u.DiscountPercentage,
+                IsDiscountActive = u.IsDiscountActive
             }).ToListAsync(cancellationToken);
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize);

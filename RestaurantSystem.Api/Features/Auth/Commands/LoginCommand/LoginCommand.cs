@@ -41,6 +41,14 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, ApiResponse<Aut
             throw new Exception("Invalid credentials");
         }
 
+        // Check if email is confirmed (only for customers)
+        if (!user.EmailConfirmed && user.Role == Domain.Common.Enums.UserRole.Customer)
+        {
+            return ApiResponse<AuthResponse>.Failure(
+                "Please verify your email address before logging in. Check your inbox for the verification link.",
+                "Email verification required");
+        }
+
         // Generate tokens
         var token = _tokenService.GenerateAccessToken(user);
         user.RefreshToken = _tokenService.GenerateRefreshToken();
@@ -59,7 +67,15 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, ApiResponse<Aut
             Expiration = _tokenService.GetAccessTokenExpiration()
         };
 
-        return ApiResponse<AuthResponse>.SuccessWithData(authResponse, "User logged in successfully");
+        var message = "User logged in successfully";
+        if (user.DeletionScheduledAt.HasValue)
+        {
+            user.DeletionScheduledAt = null;
+            await _userManager.UpdateAsync(user);
+            message = "User logged in successfully. Account deletion request cancelled.";
+        }
+
+        return ApiResponse<AuthResponse>.SuccessWithData(authResponse, message);
 
     }
 }

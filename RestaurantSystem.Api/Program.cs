@@ -236,6 +236,7 @@ builder.Services.AddScoped<IQRCodeService, QRCodeService>();
 builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 builder.Services.AddScoped<LoginEventHandler>();
 builder.Services.AddHostedService<BasketCleanupService>();
+builder.Services.AddHostedService<AccountCleanupService>();
 
 // Register OrderEventService as singleton - both interface and concrete type share same instance
 builder.Services.AddSingleton<OrderEventService>();

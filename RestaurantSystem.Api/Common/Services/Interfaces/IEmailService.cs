@@ -171,4 +171,9 @@ public interface IEmailService
         string qrCodeData,
         DateTime? expiryDate = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends account deletion confirmation email
+    /// </summary>
+    Task SendAccountDeletionEmailAsync(string toEmail, string firstName, string lastName, string deleteUrl, string cancelUrl, DateTime scheduledDeletionDate);
 }

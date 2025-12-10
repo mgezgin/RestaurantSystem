@@ -32,6 +32,8 @@ namespace RestaurantSystem.Domain.Entities
         public decimal DiscountPercentage { get; set; } // Percentage to apply when threshold is met
         public bool IsDiscountActive { get; set; } = false;
 
+        public DateTime? DeletionScheduledAt { get; set; }
+
         public virtual ICollection<UserAddress> Addresses { get; set; } = new List<UserAddress>();
     }
 }

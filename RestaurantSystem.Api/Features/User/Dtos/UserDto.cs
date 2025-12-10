@@ -55,6 +55,16 @@ public class UserDto
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
+    /// Indicates whether the user is soft-deleted
+    /// </summary>
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
+    /// Date and time when the user was deleted
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
     /// Additional metadata associated with the user
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
