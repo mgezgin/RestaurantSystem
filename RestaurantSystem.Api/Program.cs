@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -133,6 +135,19 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(opt =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders()
 .AddPasswordValidator<StrongPasswordValidator<ApplicationUser>>();
+
+// Configure Data Protection to persist keys 
+// This ensures email verification and password reset tokens remain valid across pod restarts
+// Keys are stored in a persistent directory that should be mounted as a volume in production
+var keysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+if (!Directory.Exists(keysPath))
+{
+    Directory.CreateDirectory(keysPath);
+}
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+    .SetApplicationName("RestaurantSystem");
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 builder.Services.Configure<JwtSettings>(jwtSettings);

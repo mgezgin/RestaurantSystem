@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -10,7 +11,7 @@ using System.Reflection;
 
 namespace RestaurantSystem.Infrastructure.Persistence
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IDataProtectionKeyContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
@@ -69,6 +70,9 @@ namespace RestaurantSystem.Infrastructure.Persistence
         public DbSet<UserGroup> UserGroups { get; set; }
         public DbSet<GroupMembership> GroupMemberships { get; set; }
         public DbSet<GroupDiscount> GroupDiscounts { get; set; }
+
+        // Data Protection Keys
+        public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder builder)
