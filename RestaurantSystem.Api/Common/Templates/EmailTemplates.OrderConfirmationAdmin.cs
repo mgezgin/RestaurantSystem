@@ -11,8 +11,10 @@ public static partial class EmailTemplates
 
         public static string GetHtmlBody(string orderNumber, string customerName, string customerEmail, string customerPhone,
             string orderType, decimal total, IEnumerable<(string name, int quantity, decimal price)> items,
-            string? specialInstructions = null, string? deliveryAddress = null)
+            string? specialInstructions = null, string? deliveryAddress = null, string? baseUrl = null)
         {
+            // Use provided baseUrl or fallback to localhost for development
+            var apiBaseUrl = baseUrl ?? "http://localhost:5221";
             var itemsSection = string.Join("", items.Select(item =>
                 $@"<tr>
                     <td style='padding: 12px; border-bottom: 1px solid #e5e7eb;'>{item.name}</td>
@@ -139,19 +141,19 @@ public static partial class EmailTemplates
 
             <!-- Action Buttons -->
             <div style='text-align: center; margin: 24px 0;'>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=0' style='display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3); margin: 0 8px 12px 8px;'>✓ Confirm Now</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=0' style='display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3); margin: 0 8px 12px 8px;'>✓ Confirm Now</a>
             </div>
 
-            <p style='text-align: center; margin: 20px 0 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;'>Or confirm with preparation time:</p>
+            <p style='text-align: center; margin: 20px 0; color: #6b7280; font-size: 14px; margin-bottom: 12px; font-weight: 600;'>Or confirm with preparation time:</p>
             
-            <div style='text-align: center; margin: 12px 0 24px 0;'>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=15' style='display: inline-block; background: #7fa89bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>15 min</a>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=30' style='display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>30 min</a>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=45' style='display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>45 min</a>
+            <div style='text-align: center; margin: 20px 0;'>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=15' style='display: inline-block; background: #7fa89bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>15 min</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=30' style='display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>30 min</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=45' style='display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>45 min</a>
             </div>
 
             <div style='text-align: center; margin: 24px 0;'>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-cancel' style='display: inline-block; background: #dc2626; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);'>✕ Cancel Order</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-cancel' style='display: inline-block; background: #dc2626; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);'>✕ Cancel Order</a>
             </div>
 
             <p style='text-align: center; margin: 20px 0; padding: 16px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280;'>
@@ -248,19 +250,19 @@ public static partial class EmailTemplates
 
             <!-- Action Buttons -->
             <div style='text-align: center; margin: 24px 0;'>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=0' style='display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.4); margin: 0 8px 12px 8px;'>✓ Confirm Now</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=0' style='display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.4); margin: 0 8px 12px 8px;'>✓ Confirm Now</a>
             </div>
 
             <p style='text-align: center; margin: 20px 0 12px 0; color: #9ca3af; font-size: 14px; font-weight: 500;'>Or confirm with preparation time:</p>
             
             <div style='text-align: center; margin: 12px 0 24px 0;'>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=15' style='display: inline-block; background: #6b9688; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>15 min</a>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=30' style='display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>30 min</a>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-confirm?minutes=45' style='display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>45 min</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=15' style='display: inline-block; background: #6b9688; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>15 min</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=30' style='display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>30 min</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-confirm?minutes=45' style='display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 4px 6px; min-width: 90px;'>45 min</a>
             </div>
 
             <div style='text-align: center; margin: 24px 0;'>
-                <a href='http://localhost:5221/api/Orders/{orderNumber}/quick-cancel' style='display: inline-block; background: #dc2626; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);'>✕ Cancel Order</a>
+                <a href='{apiBaseUrl}/api/Orders/{orderNumber}/quick-cancel' style='display: inline-block; background: #dc2626; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4);'>✕ Cancel Order</a>
             </div>
 
             <p style='text-align: center; margin: 20px 0; padding: 16px; background: #374151; border-radius: 8px; font-size: 13px; color: #9ca3af;'>
