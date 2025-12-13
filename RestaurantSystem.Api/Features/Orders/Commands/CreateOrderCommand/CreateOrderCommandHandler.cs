@@ -84,7 +84,9 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 FocusedBy = command.IsFocusOrder ? _currentUserService.UserId?.ToString() : null,
                 Notes = command.Notes,
                 OrderDate = DateTime.UtcNow,
-                Status = OrderStatus.Pending,
+                Tip = command.Tip,
+                // Auto-confirm Dine-in orders, keep others as Pending
+                Status = command.Type == OrderType.DineIn ? OrderStatus.Confirmed : OrderStatus.Pending,
                 PaymentStatus = PaymentStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
@@ -320,7 +322,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
         {
             FromStatus = OrderStatus.Pending,
             ToStatus = order.Status,
-            Notes = "Order created",
+            Notes = command.Type == OrderType.DineIn ? "Order created and auto-confirmed (Dine-in)" : "Order created",
             ChangedAt = DateTime.UtcNow,
             ChangedBy = _currentUserService.UserId?.ToString() ?? "System",
             CreatedAt = DateTime.UtcNow,
@@ -404,9 +406,90 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Api
                 await _orderEventService.NotifyFocusOrderUpdate(orderDto);
             }
 
-            // NOTE: Email sending has been moved to the explicit /send-confirmation-email endpoint
+            // Send order-confirmed email for Dine-in orders (auto-confirmed)
+            // For other order types, email sending is handled by the /send-confirmation-email endpoint
+            if (command.Type == OrderType.DineIn && !string.IsNullOrEmpty(order.CustomerEmail))
+            {
+                try
+                {
+                    await _emailService.SendOrderConfirmedEmailAsync(
+                        order.CustomerEmail,
+                        order.CustomerName ?? "Valued Customer",
+                        order.OrderNumber,
+                        order.Type.ToString(),
+                        estimatedPreparationMinutes: 15); // Default 15 minutes for dine-in
+                    
+                    _logger.LogInformation("Sent order-confirmed email for Dine-in order {OrderNumber} to {Email}",
+                        order.OrderNumber, order.CustomerEmail);
+                }
+                catch (Exception emailEx)
+                {
+                    // Don't fail the order creation if email fails
+                    _logger.LogError(emailEx, "Failed to send order-confirmed email for Dine-in order {OrderNumber}", 
+                        order.OrderNumber);
+                }
+            }
+
+            // Reserve table for dine-in orders
+            if (order.Type == OrderType.DineIn && order.TableNumber.HasValue)
+            {
+                try
+                {
+                    var tableNumber = order.TableNumber.Value.ToString();
+                    
+                    // Find table by number
+                    var table = await _context.Tables
+                        .FirstOrDefaultAsync(t => t.TableNumber == tableNumber && t.IsActive, cancellationToken);
+                    
+                    if (table != null)
+                    {
+                        // Check if table is already reserved
+                        var now = DateTime.UtcNow;
+                        var existingReservation = await _context.TableReservations
+                            .FirstOrDefaultAsync(r => 
+                                r.TableId == table.Id && 
+                                r.IsActive && 
+                                r.ReservedUntil > now, 
+                                cancellationToken);
+
+                        if (existingReservation == null)
+                        {
+                            var reservation = new TableReservation
+                            {
+                                TableId = table.Id,
+                                TableNumber = tableNumber,
+                                OrderId = order.Id,
+                                ReservedAt = now,
+                                ReservedUntil = now.AddHours(2), // 2 hour default
+                                IsActive = true,
+                                CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                            };
+                            
+                            _context.TableReservations.Add(reservation);
+                            await _context.SaveChangesAsync(cancellationToken);
+                            
+                            _logger.LogInformation(
+                                "Table {TableNumber} reserved for order {OrderNumber} until {ReservedUntil}",
+                                tableNumber, order.OrderNumber, reservation.ReservedUntil);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(
+                                "Table {TableNumber} is already reserved until {ReservedUntil}",
+                                tableNumber, existingReservation.ReservedUntil);
+                        }
+                    }
+                }
+                catch (Exception reservationEx)
+                {
+                    _logger.LogError(reservationEx, 
+                        "Failed to create table reservation for order {OrderNumber}", 
+                        order.OrderNumber);
+                    // Don't fail the order creation if reservation fails
+                }
+            }
+            // NOTE: For Takeaway and Delivery orders, email sending has been moved to the explicit /send-confirmation-email endpoint
             // This prevents duplicate emails and gives the frontend control over when emails are sent
-            // The frontend calls this endpoint after successful order creation
 
             _logger.LogInformation("Order {OrderNumber} created successfully by user {UserId}",
                 order.OrderNumber, _currentUserService.UserId);

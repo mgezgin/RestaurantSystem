@@ -38,6 +38,7 @@ public class GetTablesQueryHandler : IQueryHandler<GetTablesQuery, ApiResponse<L
                 tablesQuery = tablesQuery.Where(t => t.IsOutdoor == query.IsOutdoor.Value);
             }
 
+            var now = DateTime.UtcNow;
             var tables = await tablesQuery
                 .OrderBy(t => t.TableNumber)
                 .Select(t => new TableDto
@@ -55,7 +56,17 @@ public class GetTablesQueryHandler : IQueryHandler<GetTablesQuery, ApiResponse<L
                     Rotation = t.Rotation,
                     Notes = t.Notes,
                     QRCodeData = t.QRCodeData,
-                    QRCodeGeneratedAt = t.QRCodeGeneratedAt
+                    QRCodeGeneratedAt = t.QRCodeGeneratedAt,
+                    // Check if table has active reservation
+                    IsReserved = _context.TableReservations.Any(r => 
+                        r.TableId == t.Id && 
+                        r.IsActive && 
+                        r.ReservedUntil > now),
+                    ReservedUntil = _context.TableReservations
+                        .Where(r => r.TableId == t.Id && r.IsActive && r.ReservedUntil > now)
+                        .OrderByDescending(r => r.ReservedUntil)
+                        .Select(r => r.ReservedUntil)
+                        .FirstOrDefault()
                 })
                 .ToListAsync(cancellationToken);
 

@@ -59,12 +59,16 @@ namespace RestaurantSystem.Infrastructure.Persistence
         // Reservation-related DbSets
         public DbSet<Table> Tables { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
+        public DbSet<TableReservation> TableReservations { get; set; }
 
         // Tax Configuration
         public DbSet<TaxConfiguration> TaxConfigurations { get; set; }
 
         // Order Type Configuration
         public DbSet<OrderTypeConfiguration> OrderTypeConfigurations { get; set; }
+
+        // Working Hours
+        public DbSet<WorkingHours> WorkingHours { get; set; }
 
         // User Groups & Discounts
         public DbSet<UserGroup> UserGroups { get; set; }

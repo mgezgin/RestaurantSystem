@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
 using RestaurantSystem.Api.BackgroundServices;
+using RestaurantSystem.Api.Services;
 using RestaurantSystem.Api.Common.Conventers;
 using RestaurantSystem.Api.Common.Extensions;
 using RestaurantSystem.Api.Common.Middleware;
@@ -246,12 +247,17 @@ builder.Services.AddScoped<IPointEarningRuleService, PointEarningRuleService>();
 builder.Services.AddScoped<IFidelityPointsService, FidelityPointsService>();
 builder.Services.AddScoped<ICustomerDiscountService, CustomerDiscountService>();
 builder.Services.AddScoped<ITaxConfigurationService, TaxConfigurationService>();
+// Settings Services
 builder.Services.AddScoped<IOrderTypeConfigurationService, OrderTypeConfigurationService>();
+builder.Services.AddScoped<IWorkingHoursService, WorkingHoursService>();
+
 builder.Services.AddScoped<IQRCodeService, QRCodeService>();
 builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 builder.Services.AddScoped<LoginEventHandler>();
+// Register background services
 builder.Services.AddHostedService<BasketCleanupService>();
 builder.Services.AddHostedService<AccountCleanupService>();
+builder.Services.AddHostedService<TableReservationCleanupService>();
 
 // Register OrderEventService as singleton - both interface and concrete type share same instance
 builder.Services.AddSingleton<OrderEventService>();

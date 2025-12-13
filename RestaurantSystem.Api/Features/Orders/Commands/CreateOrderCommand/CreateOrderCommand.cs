@@ -31,6 +31,9 @@ public record CreateOrderCommand : ICommand<ApiResponse<OrderDto>>
     // Fidelity Points
     public int? PointsToRedeem { get; set; }
 
+    // Tip
+    public decimal Tip { get; set; }
+
     // Focus Order
     public bool IsFocusOrder { get; set; }
     public int? Priority { get; set; }

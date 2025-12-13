@@ -17,9 +17,6 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
     private readonly ApplicationDbContext _context;
     private readonly ILogger<GetAvailableTimeSlotsQueryHandler> _logger;
 
-    // Restaurant operating hours
-    private static readonly TimeSpan OpeningTime = new TimeSpan(11, 30, 0); // 11:30 AM
-    private static readonly TimeSpan ClosingTime = new TimeSpan(22, 0, 0);  // 10:00 PM
     private static readonly int SlotDurationMinutes = 120; // 2 hours per reservation
 
     public GetAvailableTimeSlotsQueryHandler(ApplicationDbContext context, ILogger<GetAvailableTimeSlotsQueryHandler> logger)
@@ -38,8 +35,30 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
                 return ApiResponse<AvailableTimeSlotsDto>.Failure("Cannot make reservations for past dates");
             }
 
+            // Get working hours for this day of week
+            var dayOfWeek = query.Date.DayOfWeek;
+            var workingHours = await _context.WorkingHours
+                .FirstOrDefaultAsync(wh => wh.DayOfWeek == dayOfWeek && wh.IsActive, cancellationToken);
+
+            // If restaurant is closed on this day or working hours not configured
+            if (workingHours == null || workingHours.IsClosed)
+            {
+                _logger.LogInformation("Restaurant is closed on {DayOfWeek} ({Date})", dayOfWeek, query.Date.Date);
+                return ApiResponse<AvailableTimeSlotsDto>.SuccessWithData(new AvailableTimeSlotsDto
+                {
+                    Date = query.Date,
+                    TimeSlots = new List<TimeSlotDto>() // Empty - no slots available
+                });
+            }
+
+            // Use configured opening/closing times from database
+            var openingTime = workingHours.OpenTime;
+            var closingTime = workingHours.CloseTime;
+
+            _logger.LogInformation("Using working hours for {DayOfWeek}: {OpenTime} - {CloseTime}", 
+                dayOfWeek, openingTime, closingTime);
+
             // Get ALL active tables (not filtered by capacity)
-            // This allows the frontend to make intelligent decisions about availability
             var allTables = await _context.Tables
                 .Where(t => t.IsActive)
                 .ToListAsync(cancellationToken);
@@ -50,22 +69,33 @@ public class GetAvailableTimeSlotsQueryHandler : IQueryHandler<GetAvailableTimeS
             }
 
             // Get all confirmed/pending reservations for the requested date
-            // Ensure DateTime has UTC kind for PostgreSQL compatibility
             var queryDateUtc = DateTime.SpecifyKind(query.Date.Date, DateTimeKind.Utc);
             var existingReservations = await _context.Reservations
                 .Where(r => r.ReservationDate.Date == queryDateUtc &&
                            (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed))
                 .ToListAsync(cancellationToken);
 
+            // For today's date, filter out past time slots
+            var now = DateTime.UtcNow;
+            var isToday = query.Date.Date == now.Date;
+            var currentTimeSpan = isToday ? now.TimeOfDay : TimeSpan.Zero;
+
             // Generate time slots
             var timeSlots = new List<TimeSlotDto>();
-            var currentTime = OpeningTime;
+            var currentTime = openingTime;
 
-            while (currentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes)) <= ClosingTime)
+            while (currentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes)) <= closingTime)
             {
                 var slotEndTime = currentTime.Add(TimeSpan.FromMinutes(SlotDurationMinutes));
 
-                // Find available tables for this time slot (ALL tables, regardless of capacity)
+                // Skip past time slots for today
+                if (isToday && currentTime <= currentTimeSpan)
+                {
+                    currentTime = currentTime.Add(TimeSpan.FromMinutes(30));
+                    continue;
+                }
+
+                // Find available tables for this time slot
                 var availableTables = allTables.Where(table =>
                 {
                     // Check if this table has any conflicting reservations

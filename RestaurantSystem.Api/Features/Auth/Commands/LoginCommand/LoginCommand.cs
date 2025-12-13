@@ -42,15 +42,12 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, ApiResponse<Aut
         }
 
         // Check if email is confirmed (only for customers)
-        // TEMPORARILY DISABLED until SMTP issues are fixed
-        /*
         if (!user.EmailConfirmed && user.Role == Domain.Common.Enums.UserRole.Customer)
         {
             return ApiResponse<AuthResponse>.Failure(
                 "Please verify your email address before logging in. Check your inbox for the verification link.",
                 "Email verification required");
         }
-        */
 
         // Generate tokens
         var token = _tokenService.GenerateAccessToken(user);

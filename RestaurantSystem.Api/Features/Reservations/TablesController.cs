@@ -10,6 +10,7 @@ using RestaurantSystem.Api.Features.Reservations.Dtos;
 using RestaurantSystem.Api.Features.Reservations.Queries.GetTableByIdQuery;
 using RestaurantSystem.Api.Features.Reservations.Queries.GetTablesQuery;
 using RestaurantSystem.Api.Features.Reservations.Queries.ValidateTableQRCodeQuery;
+using RestaurantSystem.Api.Features.Reservations.Commands.ReleaseTableCommand;
 
 namespace RestaurantSystem.Api.Features.Reservations;
 
@@ -143,6 +144,24 @@ public class TablesController : ControllerBase
         if (!result.Success)
         {
             return NotFound(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Release a reserved table (Admin only)
+    /// </summary>
+    [HttpPost("{tableNumber}/release")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<bool>>> ReleaseTable(string tableNumber)
+    {
+        var command = new ReleaseTableCommand(tableNumber);
+        var result = await _mediator.SendCommand(command);
+
+        if (!result.Success)
+        {
+            return BadRequest(result);
         }
 
         return Ok(result);

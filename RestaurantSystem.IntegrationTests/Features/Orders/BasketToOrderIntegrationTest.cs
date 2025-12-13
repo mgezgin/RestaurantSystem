@@ -196,7 +196,7 @@ public class BasketToOrderIntegrationTest : IntegrationTestBase
         createdOrder.Type.Should().Be(OrderType.DineIn.ToString());
         createdOrder.TableNumber.Should().Be(5);
         createdOrder.CustomerName.Should().Be("Test Customer");
-        createdOrder.Status.Should().Be(OrderStatus.Pending.ToString());
+        createdOrder.Status.Should().Be(OrderStatus.Confirmed.ToString());
         createdOrder.PaymentStatus.Should().Be(PaymentStatus.Pending.ToString());
         createdOrder.Items.Should().HaveCount(2);
 

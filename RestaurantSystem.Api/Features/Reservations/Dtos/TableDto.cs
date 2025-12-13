@@ -16,4 +16,8 @@ public record TableDto
     public string? Notes { get; set; }
     public string? QRCodeData { get; set; }
     public DateTime? QRCodeGeneratedAt { get; set; }
+    
+    // Reservation status
+    public bool IsReserved { get; set; }
+    public DateTime? ReservedUntil { get; set; }
 }

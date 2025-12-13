@@ -12,6 +12,7 @@ using RestaurantSystem.Api.Features.Orders.Commands.ToggleFocusOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.ApproveDelayCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.RejectDelayCommand;
 using RestaurantSystem.Api.Features.Orders.Commands.UpdateOrderStatusCommand;
+using RestaurantSystem.Api.Features.Orders.Commands.DeleteOrderCommand;
 using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Queries.GetFocusOrdersQuery;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrderByIdQuery;
@@ -166,6 +167,18 @@ public class OrdersController : ControllerBase
     {
         command.OrderId = orderId;
         command.PaymentId = paymentId;
+        var result = await _mediator.SendCommand(command);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Delete an order (soft delete)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [RequireAdmin]
+    public async Task<ActionResult<ApiResponse<bool>>> DeleteOrder(Guid id)
+    {
+        var command = new DeleteOrderCommand(id);
         var result = await _mediator.SendCommand(command);
         return Ok(result);
     }

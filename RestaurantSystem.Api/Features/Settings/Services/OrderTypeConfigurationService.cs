@@ -12,13 +12,16 @@ public class OrderTypeConfigurationService : IOrderTypeConfigurationService
 {
     private readonly ApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IWorkingHoursService _workingHoursService;
 
     public OrderTypeConfigurationService(
         ApplicationDbContext context,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IWorkingHoursService workingHoursService)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _workingHoursService = workingHoursService;
     }
 
     public async Task<List<OrderTypeConfigurationDto>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -42,6 +45,18 @@ public class OrderTypeConfigurationService : IOrderTypeConfigurationService
             .OrderBy(c => c.DisplayOrder)
             .Select(c => c.OrderType)
             .ToListAsync(cancellationToken);
+
+        // Check if restaurant is currently open for dine-in using dynamic working hours
+        if (enabledTypes.Contains(OrderType.DineIn))
+        {
+            var isOpen = await _workingHoursService.IsOpenNowAsync(cancellationToken);
+
+            // Remove dine-in if restaurant is closed
+            if (!isOpen)
+            {
+                enabledTypes.Remove(OrderType.DineIn);
+            }
+        }
 
         return enabledTypes;
     }

@@ -67,7 +67,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             .Include(p => p.DetailedIngredients)
                 .ThenInclude(di => di.Descriptions)
             .Include(p => p.MenuDefinition)
-            .FirstOrDefaultAsync(p => p.Id == command.Id, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == command.Id && !p.IsDeleted, cancellationToken);
 
         if (product == null)
         {
