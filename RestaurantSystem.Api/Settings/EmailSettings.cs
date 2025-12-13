@@ -72,6 +72,11 @@ public class EmailSettings
     public string FrontendBaseUrl { get; set; } = "http://localhost:3000";
 
     /// <summary>
+    /// Base URL for the backend API (used in email action links)
+    /// </summary>
+    public string BackendBaseUrl { get; set; } = "http://localhost:5221";
+
+    /// <summary>
     /// Whether emails are enabled (useful for development/testing)
     /// </summary>
     public bool EmailsEnabled { get; set; } = true;
