@@ -11,10 +11,11 @@ public static partial class EmailTemplates
 
         public static string GetHtmlBody(string orderNumber, string customerName, string customerEmail, string customerPhone,
             string orderType, decimal total, IEnumerable<(string name, int quantity, decimal price)> items,
-            string? specialInstructions = null, string? deliveryAddress = null, string? baseUrl = null)
+            string? specialInstructions = null, string? deliveryAddress = null, string? baseUrl = null, string? frontendBaseUrl = null)
         {
             // Use provided baseUrl or fallback to localhost for development
             var apiBaseUrl = baseUrl ?? "http://localhost:5221";
+            var frontendUrl = frontendBaseUrl ?? "http://localhost:3000";
             var itemsSection = string.Join("", items.Select(item =>
                 $@"<tr>
                     <td style='padding: 12px; border-bottom: 1px solid #e5e7eb;'>{item.name}</td>
@@ -157,7 +158,7 @@ public static partial class EmailTemplates
             </div>
 
             <p style='text-align: center; margin: 20px 0; padding: 16px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280;'>
-                Need a different time? <a href='http://localhost:3000/admin/orders-management' style='color: #3b82f6; text-decoration: none; font-weight: 600;'>Open dashboard</a> for custom preparation time
+                Need a different time? <a href='{frontendUrl}/admin/orders-management' style='color: #3b82f6; text-decoration: none; font-weight: 600;'>Open dashboard</a> for custom preparation time
             </p>
 
             <div style='margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;'>
@@ -266,7 +267,7 @@ public static partial class EmailTemplates
             </div>
 
             <p style='text-align: center; margin: 20px 0; padding: 16px; background: #374151; border-radius: 8px; font-size: 13px; color: #9ca3af;'>
-                Need a different time? <a href='http://localhost:3000/admin/orders-management' style='color: #60a5fa; text-decoration: none; font-weight: 600;'>Open dashboard</a> for custom preparation time
+                Need a different time? <a href='{frontendUrl}/admin/orders-management' style='color: #60a5fa; text-decoration: none; font-weight: 600;'>Open dashboard</a> for custom preparation time
             </p>
 
             <div style='margin-top: 32px; padding-top: 24px; border-top: 1px solid #4b5563;'>

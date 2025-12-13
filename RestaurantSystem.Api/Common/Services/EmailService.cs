@@ -379,9 +379,10 @@ public class EmailService : IEmailService
         {
             var subject = EmailTemplates.OrderConfirmationAdmin.Subject;
             var baseUrl = _emailSettings.BackendBaseUrl ?? "http://localhost:5221";
+            var frontendUrl = _emailSettings.FrontendBaseUrl ?? "http://localhost:3000";
             var htmlBody = EmailTemplates.OrderConfirmationAdmin.GetHtmlBody(
                 orderNumber, customerName, customerEmail, customerPhone, orderType, total, items,
-                specialInstructions, deliveryAddress, baseUrl);
+                specialInstructions, deliveryAddress, baseUrl, frontendUrl);
             var textBody = EmailTemplates.OrderConfirmationAdmin.GetTextBody(
                 orderNumber, customerName, customerEmail, customerPhone, orderType, total, items,
                 specialInstructions, deliveryAddress);
