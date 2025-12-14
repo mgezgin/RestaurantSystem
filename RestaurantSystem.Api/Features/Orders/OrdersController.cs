@@ -31,14 +31,16 @@ public class OrdersController : ControllerBase
     private readonly IOrderEventService _orderEventService;
     private readonly IEmailService _emailService;
     private readonly ILogger<OrdersController> _logger;
+    private readonly IConfiguration _configuration;
 
     public OrdersController(CustomMediator mediator, IOrderEventService orderEventService,
-        IEmailService emailService, ILogger<OrdersController> logger)
+        IEmailService emailService, ILogger<OrdersController> logger, IConfiguration configuration)
     {
         _mediator = mediator;
         _orderEventService = orderEventService;
         _emailService = emailService;
         _logger = logger;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -351,11 +353,12 @@ public class OrdersController : ControllerBase
                     : ("Order Confirmed", "✓", "#059669", "Order Confirmed!", 
                        $"Order <strong>{orderNumber}</strong> has been confirmed.<br><br>Preparation time: <strong>{minutes} minutes</strong>");
 
+                var frontendUrl = _configuration["EmailSettings:FrontendBaseUrl"] ?? "http://localhost:3000";
                 return Content($@"
                     <html>
                     <head>
                         <title>{title}</title>
-                        <meta http-equiv='refresh' content='5;url=http://localhost:3000/admin/orders-management'>
+                        <meta http-equiv='refresh' content='5;url={frontendUrl}/admin/orders-management'>
                     </head>
                     <body style='font-family: Arial; text-align: center; padding: 50px;'>
                         <div style='max-width: 500px; margin: 0 auto;'>
@@ -473,11 +476,12 @@ public class OrdersController : ControllerBase
 
             if (result.Success)
             {
+                var frontendUrl = _configuration["EmailSettings:FrontendBaseUrl"] ?? "http://localhost:3000";
                 return Content($@"
                     <html>
                     <head>
                         <title>Order Cancelled</title>
-                        <meta http-equiv='refresh' content='3;url=http://localhost:3000/admin/orders-management'>
+                        <meta http-equiv='refresh' content='3;url={frontendUrl}/admin/orders-management'>
                     </head>
                     <body style='font-family: Arial; text-align: center; padding: 50px;'>
                         <div style='max-width: 500px; margin: 0 auto;'>
