@@ -104,25 +104,41 @@ public class CreateReservationCommandHandler : ICommandHandler<CreateReservation
                     reservation.NumberOfGuests,
                     reservation.SpecialRequests);
 
-                // Send to admin
-                var adminEmailBody = $@"New reservation request received:
 
-Customer: {reservation.CustomerName}
-Email: {reservation.CustomerEmail}
-Phone: {reservation.CustomerPhone}
-Date: {reservation.ReservationDate:dddd, MMMM dd, yyyy}
-Time: {reservation.StartTime:hh\:mm} - {reservation.EndTime:hh\:mm}
-Guests: {reservation.NumberOfGuests}
-Table: {table.TableNumber}
-Special Requests: {reservation.SpecialRequests ?? "None"}
-
-Please log in to the admin panel to approve or reject this reservation.";
-
+                // Send to admin with action buttons
+                var baseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? "http://localhost:5221";
+                var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_BASE_URL") ?? "http://localhost:3000";
+                
                 await _emailService.SendEmailAsync(
                     AdminEmail,
-                    $"New Reservation Request - Table {table.TableNumber}",
-                    $"<pre>{adminEmailBody}</pre>",
-                    adminEmailBody);
+                    Common.Templates.EmailTemplates.ReservationAdminNotification.Subject,
+                    Common.Templates.EmailTemplates.ReservationAdminNotification.GetHtmlBody(
+                        reservation.Id,
+                        reservation.CustomerName,
+                        reservation.CustomerEmail,
+                        reservation.CustomerPhone,
+                        reservation.ReservationDate,
+                        reservation.StartTime,
+                        reservation.EndTime,
+                        reservation.NumberOfGuests,
+                        table.TableNumber,
+                        reservation.SpecialRequests,
+                        baseUrl,
+                        frontendUrl
+                    ),
+                    Common.Templates.EmailTemplates.ReservationAdminNotification.GetTextBody(
+                        reservation.Id,
+                        reservation.CustomerName,
+                        reservation.CustomerEmail,
+                        reservation.CustomerPhone,
+                        reservation.ReservationDate,
+                        reservation.StartTime,
+                        reservation.EndTime,
+                        reservation.NumberOfGuests,
+                        table.TableNumber,
+                        reservation.SpecialRequests
+                    ));
+
 
                 _logger.LogInformation("Confirmation emails sent for reservation {ReservationId}", reservation.Id);
             }

@@ -166,10 +166,80 @@ public class BasketService : IBasketService
                 _context.BasketItems.Add(basketItem);
                 
                 // Create Child Basket Items for selected options
+                decimal totalCustomizationPrice = 0;
+                var childItemsToAdd = new List<BasketItem>();
+                
                 foreach (var option in selectedOptions)
                 {
                     var section = product.MenuDefinition.Sections.First(s => s.Id == option.SectionId);
                     var sectionItem = section.Items.First(i => i.ProductId == option.ItemId);
+                    
+                    // Load the child product with its ingredients to calculate customization price
+                    var childProduct = await _context.Products
+                        .Include(p => p.DetailedIngredients)
+                        .FirstOrDefaultAsync(p => p.Id == option.ItemId);
+                    
+                    if (childProduct == null)
+                        throw new InvalidOperationException($"Child product not found: {option.ItemId}");
+                    
+                    // Calculate customization price for this child item based on selected ingredients
+                    decimal childCustomizationPrice = 0;
+                    if (childProduct.DetailedIngredients != null && childProduct.DetailedIngredients.Any())
+                    {
+                        var selectedIngredientIds = option.SelectedIngredients ?? new List<Guid>();
+                        
+                        foreach (var ingredient in childProduct.DetailedIngredients.Where(i => i.IsOptional && i.IsActive))
+                        {
+                            bool isSelected = selectedIngredientIds.Contains(ingredient.Id);
+                            int quantity = 1;
+                            
+                            if (option.IngredientQuantities != null && option.IngredientQuantities.TryGetValue(ingredient.Id, out var qty))
+                            {
+                                quantity = qty;
+                            }
+                            
+                            // Validate max quantity
+                            if (quantity > ingredient.MaxQuantity)
+                            {
+                                quantity = ingredient.MaxQuantity;
+                            }
+                            
+                            if (ingredient.IsIncludedInBasePrice)
+                            {
+                                // Ingredient price is included in base price for 1 quantity
+                                if (!isSelected)
+                                {
+                                    // Deselected: deduct the included quantity (1)
+                                    childCustomizationPrice -= ingredient.Price;
+                                }
+                                else if (quantity > 1)
+                                {
+                                    // Selected with more than 1: add extra quantities beyond the free one
+                                    childCustomizationPrice += ingredient.Price * (quantity - 1);
+                                }
+                                // quantity == 1: already in base price, no change
+                            }
+                            else
+                            {
+                                // Regular optional ingredient (not included in base)
+                                // Add price if user selected it
+                                if (isSelected)
+                                {
+                                    childCustomizationPrice += ingredient.Price * quantity;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Add child customization price to total
+                    totalCustomizationPrice += childCustomizationPrice * option.Quantity;
+                    
+                    // Serialize ingredient quantities to JSON for child item
+                    string? ingredientQuantitiesJson = null;
+                    if (option.IngredientQuantities != null && option.IngredientQuantities.Count > 0)
+                    {
+                        ingredientQuantitiesJson = JsonSerializer.Serialize(option.IngredientQuantities);
+                    }
                     
                     var childItem = new BasketItem
                     {
@@ -177,11 +247,26 @@ public class BasketService : IBasketService
                         ProductId = option.ItemId, // The actual product ID of the option (e.g., Coke)
                         ParentBasketItem = basketItem,
                         Quantity = item.Quantity * option.Quantity, // Scale by main item quantity
-                        UnitPrice = sectionItem.AdditionalPrice, // Price is already added to parent, but we can store it here for reference or set to 0 if included
-                        ItemTotal = 0, // Included in parent total usually, or calculate if needed. Let's keep 0 to avoid double counting in simple sum
+                        UnitPrice = sectionItem.AdditionalPrice, // Section-level additional price
+                        ItemTotal = 0, // Included in parent total to avoid double counting in recalculation
+                        CustomizationPrice = childCustomizationPrice, // Store customization price for this child
+                        SelectedIngredients = option.SelectedIngredients,
+                        ExcludedIngredients = option.ExcludedIngredients,
+                        IngredientQuantitiesJson = ingredientQuantitiesJson,
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
                     };
+                    childItemsToAdd.Add(childItem);
+                }
+                
+                // Update parent item's price to include customization prices from children
+                basketItem.UnitPrice = menuTotalPrice + totalCustomizationPrice;
+                basketItem.ItemTotal = basketItem.UnitPrice * item.Quantity;
+                basketItem.CustomizationPrice = totalCustomizationPrice;
+                
+                // Add all child items to context
+                foreach (var childItem in childItemsToAdd)
+                {
                     _context.BasketItems.Add(childItem);
                 }
                 
@@ -407,6 +492,7 @@ public class BasketService : IBasketService
 
         var basketItem = await _context.BasketItems
             .Include(bi => bi.Basket)
+            .Include(bi => bi.ChildBasketItems) // Include child items for cascade deletion
             .FirstOrDefaultAsync(bi => bi.Id == basketItemId && bi.BasketId == basket.Id);
 
         if (basketItem == null)
@@ -414,6 +500,13 @@ public class BasketService : IBasketService
 
         var basketId = basketItem.BasketId;
 
+        // Remove all child items first (for menu bundles)
+        if (basketItem.ChildBasketItems != null && basketItem.ChildBasketItems.Any())
+        {
+            _context.BasketItems.RemoveRange(basketItem.ChildBasketItems);
+        }
+
+        // Remove the parent item
         _context.BasketItems.Remove(basketItem);
 
         await _context.SaveChangesAsync();
@@ -818,6 +911,7 @@ public class BasketService : IBasketService
                     Quantity = child.Quantity,
                     UnitPrice = child.UnitPrice,
                     ItemTotal = child.ItemTotal,
+                    CustomizationPrice = child.CustomizationPrice,
                     // Map other properties if needed, but for menu options these are usually minimal
                 }).ToList()
             };

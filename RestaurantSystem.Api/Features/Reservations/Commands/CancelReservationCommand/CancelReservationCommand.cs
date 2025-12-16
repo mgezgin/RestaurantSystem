@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
+using RestaurantSystem.Api.Common.Services.Interfaces;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 
@@ -11,11 +12,16 @@ public record CancelReservationCommand(Guid ReservationId) : ICommand<ApiRespons
 public class CancelReservationCommandHandler : ICommandHandler<CancelReservationCommand, ApiResponse<bool>>
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEmailService _emailService;
     private readonly ILogger<CancelReservationCommandHandler> _logger;
 
-    public CancelReservationCommandHandler(ApplicationDbContext context, ILogger<CancelReservationCommandHandler> logger)
+    public CancelReservationCommandHandler(
+        ApplicationDbContext context,
+        IEmailService emailService,
+        ILogger<CancelReservationCommandHandler> logger)
     {
         _context = context;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -43,6 +49,33 @@ public class CancelReservationCommandHandler : ICommandHandler<CancelReservation
 
             reservation.Status = ReservationStatus.Cancelled;
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Send rejection email to customer
+            try
+            {
+                await _emailService.SendEmailAsync(
+                    reservation.CustomerEmail,
+                    Common.Templates.EmailTemplates.ReservationRejected.Subject,
+                    Common.Templates.EmailTemplates.ReservationRejected.GetHtmlBody(
+                        reservation.CustomerName,
+                        reservation.ReservationDate,
+                        reservation.StartTime,
+                        reservation.NumberOfGuests
+                    ),
+                    Common.Templates.EmailTemplates.ReservationRejected.GetTextBody(
+                        reservation.CustomerName,
+                        reservation.ReservationDate,
+                        reservation.StartTime,
+                        reservation.NumberOfGuests
+                    ));
+
+                _logger.LogInformation("Rejection email sent for reservation {ReservationId}", reservation.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send rejection email for reservation {ReservationId}, but reservation was cancelled", reservation.Id);
+                // Don't fail the cancellation if email fails
+            }
 
             _logger.LogInformation("Cancelled reservation {ReservationId}", reservation.Id);
             return ApiResponse<bool>.SuccessWithData(true, "Reservation cancelled successfully");

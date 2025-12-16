@@ -42,9 +42,16 @@ public class MenusController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<PagedResult<MenuBundleDto>>>> GetMenuBundles(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] bool includeUnavailable = false)
     {
-        var query = new GetMenuBundlesQuery(page, pageSize);
+        // Only admins can view unavailable menus
+        if (includeUnavailable && !User.IsInRole("Admin"))
+        {
+            return Unauthorized(ApiResponse<PagedResult<MenuBundleDto>>.Failure("Only admins can view unavailable menus"));
+        }
+        
+        var query = new GetMenuBundlesQuery(page, pageSize, null, includeUnavailable);
         var result = await _mediator.SendQuery(query);
         return Ok(result);
     }

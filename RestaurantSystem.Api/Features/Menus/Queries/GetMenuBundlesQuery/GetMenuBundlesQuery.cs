@@ -10,7 +10,7 @@ using MediatR; // Added for MediatR
 
 namespace RestaurantSystem.Api.Features.Menus.Queries.GetMenuBundlesQuery;
 
-public record GetMenuBundlesQuery(int Page, int PageSize, Guid? CategoryId = null) : IQuery<ApiResponse<PagedResult<MenuBundleDto>>>;
+public record GetMenuBundlesQuery(int Page, int PageSize, Guid? CategoryId = null, bool IncludeUnavailable = false) : IQuery<ApiResponse<PagedResult<MenuBundleDto>>>;
 
 public class GetMenuBundlesQueryHandler(ApplicationDbContext context, IConfiguration configuration)
     : IQueryHandler<GetMenuBundlesQuery, ApiResponse<PagedResult<MenuBundleDto>>>
@@ -38,30 +38,33 @@ public class GetMenuBundlesQueryHandler(ApplicationDbContext context, IConfigura
             .Include(p => p.Images)
             .Where(p => !p.IsDeleted && p.MenuDefinition != null);
 
-        // Filter by schedule availability
-        var now = DateTime.UtcNow;
-        var currentDayOfWeek = now.DayOfWeek;
-        var currentTime = now.TimeOfDay;
+        // Filter by schedule availability (only if not including unavailable)
+        if (!query.IncludeUnavailable)
+        {
+            var now = DateTime.UtcNow;
+            var currentDayOfWeek = now.DayOfWeek;
+            var currentTime = now.TimeOfDay;
 
-        queryable = queryable.Where(p =>
-            p.MenuDefinition.IsAlwaysAvailable || // Include if always available
-            (
-                // Check if available on current day
-                (currentDayOfWeek == DayOfWeek.Monday && p.MenuDefinition.AvailableMonday) ||
-                (currentDayOfWeek == DayOfWeek.Tuesday && p.MenuDefinition.AvailableTuesday) ||
-                (currentDayOfWeek == DayOfWeek.Wednesday && p.MenuDefinition.AvailableWednesday) ||
-                (currentDayOfWeek == DayOfWeek.Thursday && p.MenuDefinition.AvailableThursday) ||
-                (currentDayOfWeek == DayOfWeek.Friday && p.MenuDefinition.AvailableFriday) ||
-                (currentDayOfWeek == DayOfWeek.Saturday && p.MenuDefinition.AvailableSaturday) ||
-                (currentDayOfWeek == DayOfWeek.Sunday && p.MenuDefinition.AvailableSunday)
-            ) &&
-            (
-                // Check if within time range (if times are set)
-                (p.MenuDefinition.StartTime == null && p.MenuDefinition.EndTime == null) ||
-                (p.MenuDefinition.StartTime != null && p.MenuDefinition.EndTime != null &&
-                 currentTime >= p.MenuDefinition.StartTime && currentTime <= p.MenuDefinition.EndTime)
-            )
-        );
+            queryable = queryable.Where(p =>
+                p.MenuDefinition.IsAlwaysAvailable || // Include if always available
+                (
+                    // Check if available on current day
+                    (currentDayOfWeek == DayOfWeek.Monday && p.MenuDefinition.AvailableMonday) ||
+                    (currentDayOfWeek == DayOfWeek.Tuesday && p.MenuDefinition.AvailableTuesday) ||
+                    (currentDayOfWeek == DayOfWeek.Wednesday && p.MenuDefinition.AvailableWednesday) ||
+                    (currentDayOfWeek == DayOfWeek.Thursday && p.MenuDefinition.AvailableThursday) ||
+                    (currentDayOfWeek == DayOfWeek.Friday && p.MenuDefinition.AvailableFriday) ||
+                    (currentDayOfWeek == DayOfWeek.Saturday && p.MenuDefinition.AvailableSaturday) ||
+                    (currentDayOfWeek == DayOfWeek.Sunday && p.MenuDefinition.AvailableSunday)
+                ) &&
+                (
+                    // Check if within time range (if times are set)
+                    (p.MenuDefinition.StartTime == null && p.MenuDefinition.EndTime == null) ||
+                    (p.MenuDefinition.StartTime != null && p.MenuDefinition.EndTime != null &&
+                     currentTime >= p.MenuDefinition.StartTime && currentTime <= p.MenuDefinition.EndTime)
+                )
+            );
+        }
 
 
         var totalCount = await queryable.CountAsync(cancellationToken);
