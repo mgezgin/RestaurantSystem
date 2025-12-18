@@ -158,24 +158,66 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         // Update variations
         if (command.Variations != null)
         {
-            _context.ProductVariations.RemoveRange(product.Variations);
+            var incomingVariationIds = command.Variations
+                .Where(v => v.Id.HasValue)
+                .Select(v => v.Id!.Value)
+                .ToList();
             
-            // Add all variations (both new and existing)
+            // Remove variations not in the incoming list
+            var variationsToRemove = product.Variations
+                .Where(v => !incomingVariationIds.Contains(v.Id))
+                .ToList();
+            _context.ProductVariations.RemoveRange(variationsToRemove);
+            
             foreach (var variationDto in command.Variations)
             {
-                var variation = new ProductVariation
-                {
-                    ProductId = product.Id,
-                    Name = variationDto.Name,
-                    Description = variationDto.Description,
-                    PriceModifier = variationDto.PriceModifier,
-                    IsActive = variationDto.IsActive,
-                    DisplayOrder = variationDto.DisplayOrder,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
-                };
-                await _context.ProductVariations.AddAsync(variation, cancellationToken);
+                ProductVariation variation;
                 
+                if (variationDto.Id.HasValue)
+                {
+                    // Update existing variation
+                    variation = product.Variations.FirstOrDefault(v => v.Id == variationDto.Id.Value);
+                    if (variation == null)
+                    {
+                        // Variation ID was provided but not found, skip or log error
+                        _logger.LogWarning("Variation with ID {VariationId} not found for product {ProductId}", 
+                            variationDto.Id.Value, product.Id);
+                        continue;
+                    }
+                    
+                    // Update properties
+                    variation.Name = variationDto.Name;
+                    variation.Description = variationDto.Description;
+                    variation.PriceModifier = variationDto.PriceModifier;
+                    variation.IsActive = variationDto.IsActive;
+                    variation.DisplayOrder = variationDto.DisplayOrder;
+                    variation.UpdatedAt = DateTime.UtcNow;
+                    variation.UpdatedBy = _currentUserService.UserId?.ToString() ?? "System";
+                    
+                    // Remove and recreate descriptions for existing variations
+                    var existingDescriptions = await _context.ProductVariationDescriptions
+                        .Where(d => d.ProductVariationId == variation.Id)
+                        .ToListAsync(cancellationToken);
+                    _context.ProductVariationDescriptions.RemoveRange(existingDescriptions);
+                }
+                else
+                {
+                    // Create new variation
+                    variation = new ProductVariation
+                    {
+                        ProductId = product.Id,
+                        Name = variationDto.Name,
+                        Description = variationDto.Description,
+                        PriceModifier = variationDto.PriceModifier,
+                        IsActive = variationDto.IsActive,
+                        DisplayOrder = variationDto.DisplayOrder,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = _currentUserService.UserId?.ToString() ?? "System"
+                    };
+                    await _context.ProductVariations.AddAsync(variation, cancellationToken);
+                }
+                
+                // Add variation descriptions
                 if (variationDto.Content != null)
                 {
                     foreach (var (languageCode, content) in variationDto.Content)
@@ -374,6 +416,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
 
 
 public record UpdateProductVariationDto(
+    Guid? Id,
     string Name,
     string? Description,
     decimal PriceModifier,
