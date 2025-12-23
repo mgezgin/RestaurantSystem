@@ -49,6 +49,9 @@ public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, ApiResponse<P
     {
         var ordersQuery = _context.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.DetailedIngredients)
+                        .ThenInclude(pi => pi.GlobalIngredient)
             .Include(o => o.Payments)
             .Include(o => o.StatusHistory)
             .Include(o => o.DeliveryAddress)

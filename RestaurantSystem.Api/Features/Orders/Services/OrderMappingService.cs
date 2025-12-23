@@ -90,6 +90,62 @@ public class OrderMappingService : IOrderMappingService
 
     public OrderItemDto MapToOrderItemDto(OrderItem item)
     {
+        // Parse ingredient customizations
+        List<OrderItemIngredientDto>? ingredientCustomizations = null;
+        if (!string.IsNullOrEmpty(item.IngredientQuantitiesJson) && item.Product?.DetailedIngredients != null)
+        {
+            try
+            {
+                var selectedIngredients = System.Text.Json.JsonSerializer.Deserialize<Dictionary<Guid, int>>(item.IngredientQuantitiesJson);
+                if (selectedIngredients != null && selectedIngredients.Any())
+                {
+                    ingredientCustomizations = new List<OrderItemIngredientDto>();
+                    
+                    // Get all product ingredients
+                    var productIngredients = item.Product.DetailedIngredients.ToList();
+                    
+                    // Map ingredient customizations
+                    // Show all ingredients for kitchen (both selected and removed)
+                    foreach (var ing in productIngredients)
+                    {
+                        if (selectedIngredients.TryGetValue(ing.Id, out var quantity))
+                        {
+                            // Ingredient is in the order - show it regardless of quantity
+                            ingredientCustomizations.Add(new OrderItemIngredientDto
+                            {
+                                IngredientId = ing.Id,
+                                IngredientName = ing.GlobalIngredient?.DefaultName ?? ing.Name,
+                                Quantity = quantity,
+                                IsRemoved = quantity == 0
+                            });
+                        }
+                        else if (!ing.IsOptional)
+                        {
+                            // Required ingredient not in selection at all = removed
+                            ingredientCustomizations.Add(new OrderItemIngredientDto
+                            {
+                                IngredientId = ing.Id,
+                                IngredientName = ing.GlobalIngredient?.DefaultName ?? ing.Name,
+                                Quantity = 0,
+                                IsRemoved = true
+                            });
+                        }
+                    }
+                }
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse ingredient quantities for order item {ItemId}", item.Id);
+            }
+        }
+
+        // Map child items (side items/additionals)
+        List<OrderItemDto>? sideItems = null;
+        if (item.ChildOrderItems != null && item.ChildOrderItems.Any())
+        {
+            sideItems = item.ChildOrderItems.Select(MapToOrderItemDto).ToList();
+        }
+
         return new OrderItemDto
         {
             Id = item.Id,
@@ -102,7 +158,9 @@ public class OrderMappingService : IOrderMappingService
             UnitPrice = item.UnitPrice,
             ItemTotal = item.ItemTotal,
             SpecialInstructions = item.SpecialInstructions,
-            KitchenType = item.Product?.KitchenType.ToString()
+            KitchenType = item.Product?.KitchenType.ToString(),
+            IngredientCustomizations = ingredientCustomizations,
+            SideItems = sideItems
         };
     }
 

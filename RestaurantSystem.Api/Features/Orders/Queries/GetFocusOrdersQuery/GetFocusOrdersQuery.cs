@@ -2,6 +2,7 @@
 using RestaurantSystem.Api.Abstraction.Messaging;
 using RestaurantSystem.Api.Common.Models;
 using RestaurantSystem.Api.Features.Orders.Dtos;
+using RestaurantSystem.Api.Features.Orders.Services;
 using RestaurantSystem.Domain.Common.Enums;
 using RestaurantSystem.Infrastructure.Persistence;
 
@@ -18,19 +19,25 @@ public class GetFocusOrdersQueryHandler : IQueryHandler<GetFocusOrdersQuery, Api
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<GetFocusOrdersQueryHandler> _logger;
+    private readonly IOrderMappingService _mappingService;
 
     public GetFocusOrdersQueryHandler(
         ApplicationDbContext context,
-        ILogger<GetFocusOrdersQueryHandler> logger)
+        ILogger<GetFocusOrdersQueryHandler> logger,
+        IOrderMappingService mappingService)
     {
         _context = context;
         _logger = logger;
+        _mappingService = mappingService;
     }
 
     public async Task<ApiResponse<List<OrderDto>>> Handle(GetFocusOrdersQuery query, CancellationToken cancellationToken)
     {
         var ordersQuery = _context.Orders
             .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p!.DetailedIngredients)
+                        .ThenInclude(pi => pi.GlobalIngredient)
             .Include(o => o.Payments)
             .Include(o => o.DeliveryAddress)
             .Where(o => !o.IsDeleted && o.IsFocusOrder);
@@ -62,88 +69,7 @@ public class GetFocusOrdersQueryHandler : IQueryHandler<GetFocusOrdersQuery, Api
 
         var orders = await ordersQuery.ToListAsync(cancellationToken);
 
-        var orderDtos = orders.Select(o => new OrderDto
-        {
-            Id = o.Id,
-            OrderNumber = o.OrderNumber,
-            UserId = o.UserId,
-            CustomerName = o.CustomerName,
-            CustomerEmail = o.CustomerEmail,
-            CustomerPhone = o.CustomerPhone,
-            Type = o.Type.ToString(),
-            TableNumber = o.TableNumber,
-            SubTotal = o.SubTotal,
-            Tax = o.Tax,
-            DeliveryFee = o.DeliveryFee,
-            Discount = o.Discount,
-            DiscountPercentage = o.DiscountPercentage,
-            Tip = o.Tip,
-            Total = o.Total,
-            TotalPaid = o.TotalPaid,
-            RemainingAmount = o.RemainingAmount,
-            IsFullyPaid = o.IsFullyPaid,
-            Status = o.Status.ToString(),
-            PaymentStatus = o.PaymentStatus.ToString(),
-            IsFocusOrder = o.IsFocusOrder,
-            Priority = o.Priority,
-            FocusReason = o.FocusReason,
-            FocusedAt = o.FocusedAt,
-            FocusedBy = o.FocusedBy,
-            OrderDate = o.OrderDate,
-            EstimatedDeliveryTime = o.EstimatedDeliveryTime,
-            ActualDeliveryTime = o.ActualDeliveryTime,
-            Notes = o.Notes,
-            DeliveryAddress = o.DeliveryAddress != null ? new DeliveryAddressDto
-            {
-                Id = o.DeliveryAddress.Id,
-                OrderId = o.DeliveryAddress.OrderId,
-                UserAddressId = o.DeliveryAddress.UserAddressId,
-                Label = o.DeliveryAddress.Label,
-                AddressLine1 = o.DeliveryAddress.AddressLine1,
-                AddressLine2 = o.DeliveryAddress.AddressLine2,
-                City = o.DeliveryAddress.City,
-                State = o.DeliveryAddress.State,
-                PostalCode = o.DeliveryAddress.PostalCode,
-                Country = o.DeliveryAddress.Country,
-                Phone = o.DeliveryAddress.Phone,
-                Latitude = o.DeliveryAddress.Latitude,
-                Longitude = o.DeliveryAddress.Longitude,
-                DeliveryInstructions = o.DeliveryAddress.DeliveryInstructions,
-                FullAddress = o.DeliveryAddress.GetFullAddress()
-            } : null,
-            Items = o.Items.Select(i => new OrderItemDto
-            {
-                Id = i.Id,
-                ProductId = i.ProductId,
-                ProductVariationId = i.ProductVariationId,
-                ProductName = i.ProductName,
-                VariationName = i.VariationName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                ItemTotal = i.ItemTotal,
-                SpecialInstructions = i.SpecialInstructions
-            }).ToList(),
-            Payments = o.Payments.Select(p => new OrderPaymentDto
-            {
-                Id = p.Id,
-                OrderId = p.OrderId,
-                PaymentMethod = p.PaymentMethod.ToString(),
-                Amount = p.Amount,
-                Status = p.Status.ToString(),
-                TransactionId = p.TransactionId,
-                ReferenceNumber = p.ReferenceNumber,
-                PaymentDate = p.PaymentDate,
-                CardLastFourDigits = p.CardLastFourDigits,
-                CardType = p.CardType,
-                PaymentGateway = p.PaymentGateway,
-                PaymentNotes = p.PaymentNotes,
-                IsRefunded = p.IsRefunded,
-                RefundedAmount = p.RefundedAmount,
-                RefundDate = p.RefundDate,
-                RefundReason = p.RefundReason
-            }).ToList(),
-            StatusHistory = new List<OrderStatusHistoryDto>()
-        }).ToList();
+        var orderDtos = orders.Select(o => _mappingService.MapToOrderDto(o)).ToList();
 
         _logger.LogInformation("Retrieved {Count} focus orders", orderDtos.Count);
 
