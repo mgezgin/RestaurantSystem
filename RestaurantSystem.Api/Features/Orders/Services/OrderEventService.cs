@@ -1,13 +1,14 @@
 ﻿using RestaurantSystem.Api.Features.Orders.Dtos;
 using System.Collections.Concurrent;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading.Channels;
 
 namespace RestaurantSystem.Api.Features.Orders.Services;
 
 public class OrderEventService : IOrderEventService
 {
-    private readonly ConcurrentDictionary<string, SseClient> _clients = new();
+    private readonly ConcurrentDictionary<string, ClientSubscription> _clients = new();
     private readonly ILogger<OrderEventService> _logger;
 
     public OrderEventService(ILogger<OrderEventService> logger)
@@ -15,17 +16,53 @@ public class OrderEventService : IOrderEventService
         _logger = logger;
     }
 
-    public void AddClient(string clientId, SseClient client)
+    public async IAsyncEnumerable<string> SubscribeToEvents(
+        ClientType clientType,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        _clients.TryAdd(clientId, client);
-        _logger.LogInformation("SSE client {ClientId} connected. Total clients: {Count}", clientId, _clients.Count);
-    }
+        var clientId = Guid.NewGuid().ToString();
+        var channel = Channel.CreateUnbounded<string>();
 
-    public void RemoveClient(string clientId)
-    {
-        if (_clients.TryRemove(clientId, out _))
+        var subscription = new ClientSubscription
         {
-            _logger.LogInformation("SSE client {ClientId} disconnected. Total clients: {Count}", clientId, _clients.Count);
+            ClientId = clientId,
+            ClientType = clientType,
+            Channel = channel,
+            ConnectedAt = DateTime.UtcNow
+        };
+
+        _clients.TryAdd(clientId, subscription);
+        _logger.LogInformation("SSE client {ClientId} connected with type {ClientType}. Total clients: {Count}",
+            clientId, clientType, _clients.Count);
+
+        try
+        {
+            // Send initial connection event
+            var connectionData = new
+            {
+                clientId,
+                clientType = clientType.ToString(),
+                timestamp = DateTime.UtcNow
+            };
+            var connectionJson = JsonSerializer.Serialize(connectionData,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+            yield return $"event: connected\ndata: {connectionJson}\n";
+
+            // Read events from the channel
+            await foreach (var message in channel.Reader.ReadAllAsync(cancellationToken))
+            {
+                yield return message;
+            }
+        }
+        finally
+        {
+            if (_clients.TryRemove(clientId, out _))
+            {
+                channel.Writer.Complete();
+                _logger.LogInformation("SSE client {ClientId} disconnected. Total clients: {Count}",
+                    clientId, _clients.Count);
+            }
         }
     }
 
@@ -131,72 +168,76 @@ public class OrderEventService : IOrderEventService
         _logger.LogInformation("Notified staff about focus order update for {OrderNumber}", order.OrderNumber);
     }
 
-    private async Task SendEventToClients(StockEvent eventData, ClientType targetClientType)
+    private Task SendEventToClients(StockEvent eventData, ClientType targetClientType)
     {
         var json = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
-        var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n\n";
-        var eventBytes = Encoding.UTF8.GetBytes(eventMessage);
+        var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n";
 
-        var tasks = new List<Task>();
-
-        foreach (var client in _clients.Values.Where(c =>
-            targetClientType == ClientType.All || c.ClientType == targetClientType))
-        {
-            tasks.Add(SendToClient(client, eventBytes));
-        }
-
-        await Task.WhenAll(tasks);
-    }
-
-    private async Task SendEventToClients(OrderEvent eventData, ClientType targetClientType)
-    {
-        var json = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n\n";
-        var eventBytes = Encoding.UTF8.GetBytes(eventMessage);
-
-        var targetClients = _clients.Values.Where(c =>
-            targetClientType == ClientType.All || c.ClientType == targetClientType).ToList();
+        var targetClients = _clients.Values
+            .Where(c => targetClientType == ClientType.All || c.ClientType == targetClientType)
+            .ToList();
 
         _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
             eventData.EventType, targetClients.Count, targetClientType);
 
-        var tasks = new List<Task>();
+        foreach (var client in targetClients)
+        {
+            SendToClient(client, eventMessage);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task SendEventToClients(OrderEvent eventData, ClientType targetClientType)
+    {
+        var json = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n";
+
+        var targetClients = _clients.Values
+            .Where(c => targetClientType == ClientType.All || c.ClientType == targetClientType)
+            .ToList();
+
+        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
+            eventData.EventType, targetClients.Count, targetClientType);
 
         foreach (var client in targetClients)
         {
-            tasks.Add(SendToClient(client, eventBytes));
+            SendToClient(client, eventMessage);
         }
 
-        if (tasks.Count > 0)
-        {
-            await Task.WhenAll(tasks);
-        }
+        return Task.CompletedTask;
     }
 
-    private async Task SendToClient(SseClient client, byte[] eventBytes)
+    private void SendToClient(ClientSubscription client, string eventMessage)
     {
         try
         {
-            _logger.LogDebug("Sending event to client {ClientId} ({ClientType}), {ByteCount} bytes",
-                client.ClientId, client.ClientType, eventBytes.Length);
+            _logger.LogDebug("Sending event to client {ClientId} ({ClientType})",
+                client.ClientId, client.ClientType);
 
-            await client.Response.Body.WriteAsync(eventBytes);
-            await client.Response.Body.FlushAsync();
-
-            _logger.LogDebug("Event successfully sent to client {ClientId}", client.ClientId);
+            // Non-blocking write to channel
+            if (!client.Channel.Writer.TryWrite(eventMessage))
+            {
+                _logger.LogWarning("Failed to write to channel for client {ClientId}, channel may be full or closed",
+                    client.ClientId);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send event to client {ClientId}", client.ClientId);
-            RemoveClient(client.ClientId);
+            // Remove the client and complete the channel
+            if (_clients.TryRemove(client.ClientId, out _))
+            {
+                client.Channel.Writer.Complete();
+            }
         }
     }
 
@@ -211,10 +252,10 @@ public class OrderEventService : IOrderEventService
         };
     }
 
-    public class SseClient
+    public class ClientSubscription
     {
         public string ClientId { get; set; } = null!;
-        public HttpResponse Response { get; set; } = null!;
+        public Channel<string> Channel { get; set; } = null!;
         public ClientType ClientType { get; set; }
         public DateTime ConnectedAt { get; set; }
     }
