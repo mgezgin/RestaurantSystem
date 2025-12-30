@@ -202,11 +202,14 @@ public class OrderEventService : IOrderEventService
 
     private List<ClientType> GetClientTypesForStatus(string status)
     {
+        // Service (cashiers) should always be notified of status changes
+        // Kitchen should be notified for statuses they care about
         return status switch
         {
-            "Pending" or "Confirmed" or "Preparing" => new List<ClientType> { ClientType.Kitchen },
+            "Pending" or "PendingApproval" => new List<ClientType> { ClientType.Kitchen, ClientType.Service },
+            "Confirmed" or "Preparing" => new List<ClientType> { ClientType.Kitchen, ClientType.Service },
             "Ready" => new List<ClientType> { ClientType.Kitchen, ClientType.Service },
-            "OutForDelivery" or "Completed" => new List<ClientType> { ClientType.All },
+            "OutForDelivery" or "Completed" or "Cancelled" => new List<ClientType> { ClientType.All },
             _ => new List<ClientType> { ClientType.All }
         };
     }

@@ -65,10 +65,14 @@ public class EventsController : ControllerBase
 
         // Set response headers BEFORE writing any data
         Response.ContentType = "text/event-stream";
-        Response.Headers.CacheControl = "no-cache";
+        Response.Headers.CacheControl = "no-cache, no-store";
         Response.Headers.Connection = "keep-alive";
         Response.Headers["X-Accel-Buffering"] = "no"; // Disable Nginx buffering
         Response.Headers["Access-Control-Allow-Origin"] = "*";
+
+        // Disable ASP.NET response buffering for real-time streaming
+        var bufferingFeature = Response.HttpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>();
+        bufferingFeature?.DisableBuffering();
 
         var client = new OrderEventService.SseClient
         {
@@ -97,13 +101,29 @@ public class EventsController : ControllerBase
             await Response.WriteAsync($"event: connected\ndata: {connectionJson}\n\n", cancellationToken);
             await Response.Body.FlushAsync(cancellationToken);
 
-            // Keep connection alive with heartbeats
+            // Keep connection alive with heartbeats (every 15 seconds for better reliability)
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(30000, cancellationToken); // Send heartbeat every 30 seconds
-                await Response.WriteAsync(":heartbeat\n\n", cancellationToken);
+                await Task.Delay(15000, cancellationToken);
+                
+                // Send proper SSE event format (not just a comment) so frontend can track heartbeats
+                var heartbeatData = new { timestamp = DateTime.UtcNow };
+                var heartbeatJson = System.Text.Json.JsonSerializer.Serialize(heartbeatData,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+                
+                await Response.WriteAsync($"event: heartbeat\ndata: {heartbeatJson}\n\n", cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
             }
+        }
+        catch (TaskCanceledException)
+        {
+            // Normal disconnect - client closed connection or server shutting down
+            _logger.LogInformation("SSE client disconnected normally: {ClientId}", clientId);
+        }
+        catch (OperationCanceledException)
+        {
+            // Also normal for connection close
+            _logger.LogInformation("SSE client connection closed: {ClientId}", clientId);
         }
         catch (Exception ex)
         {
@@ -111,7 +131,7 @@ public class EventsController : ControllerBase
         }
         finally
         {
-            _logger.LogInformation("SSE client disconnected: {ClientId}", clientId);
+            _logger.LogInformation("SSE client cleanup: {ClientId}", clientId);
             _orderEventService.RemoveClient(clientId);
         }
     }

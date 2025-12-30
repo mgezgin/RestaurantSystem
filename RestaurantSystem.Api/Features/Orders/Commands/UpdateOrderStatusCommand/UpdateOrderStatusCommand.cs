@@ -140,6 +140,9 @@ public class UpdateOrderStatusCommandHandler : ICommandHandler<UpdateOrderStatus
                         var approveUrl = $"{baseUrl}/api/orders/{order.Id}/approve-delay";
                         var rejectUrl = $"{baseUrl}/api/orders/{order.Id}/reject-delay";
 
+                        _logger.LogInformation("Sending order delay email for {OrderNumber}. BackendBaseUrl from config: {BaseUrl}", 
+                            order.OrderNumber, baseUrl);
+
                         await _emailService.SendOrderDelayedEmailAsync(
                             order.CustomerEmail,
                             order.CustomerName ?? "Customer",

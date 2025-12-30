@@ -86,8 +86,6 @@ public class AppleLoginCommandHandler : ICommandHandler<AppleLoginCommand, ApiRe
                 {
                     return ApiResponse<AuthResponse>.Failure("Registration failed", string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
-
-                await _userManager.AddToRoleAsync(user, "Customer");
             }
 
             var token = _tokenService.GenerateAccessToken(user);

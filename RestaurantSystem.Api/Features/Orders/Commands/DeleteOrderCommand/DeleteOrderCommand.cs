@@ -27,34 +27,30 @@ public class DeleteOrderCommandHandler : ICommandHandler<DeleteOrderCommand, Api
 
     public async Task<ApiResponse<bool>> Handle(DeleteOrderCommand command, CancellationToken cancellationToken)
     {
-        // Find the order (including soft-deleted for proper handling)
-        var order = await _context.Orders
-            .IgnoreQueryFilters() // Include soft-deleted to prevent re-deletion
-            .FirstOrDefaultAsync(o => o.Id == command.OrderId, cancellationToken);
+        // 1. Delete associated TableReservations first to avoid FK constraint violation
+        // strict FK "fk_table_reservations_orders_order_id" prevents deleting order otherwise
+        // Use IgnoreQueryFilters to ensure we catch ALL linked reservations, even soft-deleted ones
+        await _context.TableReservations
+            .IgnoreQueryFilters()
+            .Where(tr => tr.OrderId == command.OrderId)
+            .ExecuteDeleteAsync(cancellationToken);
 
-        if (order == null)
+        // 2. Hard delete the order using ExecuteDeleteAsync for efficiency
+        // This will cascade delete related entities (Items, Payments, etc.) due to DB configuration
+        var rowsDeleted = await _context.Orders
+            .Where(o => o.Id == command.OrderId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        if (rowsDeleted == 0)
         {
             return ApiResponse<bool>.Failure("Order not found");
         }
 
-        if (order.IsDeleted)
-        {
-            return ApiResponse<bool>.Failure("Order has already been deleted");
-        }
-
-        // Soft delete the order
-        order.IsDeleted = true;
-        order.DeletedAt = DateTime.UtcNow;
-        order.DeletedBy = _currentUserService.UserId?.ToString() ?? "System";
-
-        await _context.SaveChangesAsync(cancellationToken);
-
         _logger.LogInformation(
-            "Order {OrderNumber} (ID: {OrderId}) deleted by user {UserId}",
-            order.OrderNumber,
-            order.Id,
+            "Order with ID {OrderId} permanently deleted by user {UserId}",
+            command.OrderId,
             _currentUserService.UserId);
 
-        return ApiResponse<bool>.SuccessWithData(true, "Order deleted successfully");
+        return ApiResponse<bool>.SuccessWithData(true, "Order permanently deleted");
     }
 }
