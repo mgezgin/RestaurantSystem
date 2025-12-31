@@ -144,7 +144,7 @@ public class OrderEventService : IOrderEventService
         var tasks = new List<Task>();
 
         foreach (var client in _clients.Values.Where(c =>
-            targetClientType == ClientType.All || c.ClientType == targetClientType))
+            targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager))
         {
             tasks.Add(SendToClient(client, eventBytes));
         }
@@ -163,7 +163,7 @@ public class OrderEventService : IOrderEventService
         var eventBytes = Encoding.UTF8.GetBytes(eventMessage);
 
         var targetClients = _clients.Values.Where(c =>
-            targetClientType == ClientType.All || c.ClientType == targetClientType).ToList();
+            targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager).ToList();
 
         _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
             eventData.EventType, targetClients.Count, targetClientType);
