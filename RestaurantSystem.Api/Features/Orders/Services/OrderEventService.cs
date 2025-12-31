@@ -141,15 +141,24 @@ public class OrderEventService : IOrderEventService
         var eventMessage = $"event: {eventData.EventType}\ndata: {json}\n\n";
         var eventBytes = Encoding.UTF8.GetBytes(eventMessage);
 
+        // Create snapshot to avoid race conditions during iteration
+        var targetClients = _clients.Values.Where(c =>
+            targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager).ToList();
+
+        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
+            eventData.EventType, targetClients.Count, targetClientType);
+
         var tasks = new List<Task>();
 
-        foreach (var client in _clients.Values.Where(c =>
-            targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager))
+        foreach (var client in targetClients)
         {
             tasks.Add(SendToClient(client, eventBytes));
         }
 
-        await Task.WhenAll(tasks);
+        if (tasks.Count > 0)
+        {
+            await Task.WhenAll(tasks);
+        }
     }
 
     private async Task SendEventToClients(OrderEvent eventData, ClientType targetClientType)
@@ -188,14 +197,22 @@ public class OrderEventService : IOrderEventService
             _logger.LogDebug("Sending event to client {ClientId} ({ClientType}), {ByteCount} bytes",
                 client.ClientId, client.ClientType, eventBytes.Length);
 
-            await client.Response.Body.WriteAsync(eventBytes);
-            await client.Response.Body.FlushAsync();
+            // Use timeout to prevent hanging on dead connections (5 seconds max per client)
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+            await client.Response.Body.WriteAsync(eventBytes, cts.Token);
+            await client.Response.Body.FlushAsync(cts.Token);
 
             _logger.LogDebug("Event successfully sent to client {ClientId}", client.ClientId);
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Timeout sending event to client {ClientId} - removing client", client.ClientId);
+            RemoveClient(client.ClientId);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send event to client {ClientId}", client.ClientId);
+            _logger.LogError(ex, "Failed to send event to client {ClientId} - removing client", client.ClientId);
             RemoveClient(client.ClientId);
         }
     }
