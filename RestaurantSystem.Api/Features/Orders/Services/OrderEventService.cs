@@ -157,20 +157,38 @@ public class OrderEventService : IOrderEventService
         var targetClients = _clients.Values.Where(c =>
             targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager).ToList();
 
-        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
-            eventData.EventType, targetClients.Count, targetClientType);
+        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s): [{ClientIds}]",
+            eventData.EventType, targetClients.Count, targetClientType,
+            string.Join(", ", targetClients.Select(c => c.ClientId)));
 
-        var tasks = new List<Task>();
-
-        foreach (var client in targetClients)
+        if (targetClients.Count == 0)
         {
-            tasks.Add(SendToClient(client, eventBytes));
+            _logger.LogWarning("No clients to broadcast event {EventType} for type {ClientType}",
+                eventData.EventType, targetClientType);
+            return;
         }
 
-        if (tasks.Count > 0)
+        // Send to all clients in parallel, but track each individually
+        int successCount = 0;
+        int failureCount = 0;
+        var sendTasks = targetClients.Select(async client =>
         {
-            await Task.WhenAll(tasks);
-        }
+            try
+            {
+                await SendToClient(client, eventBytes);
+                Interlocked.Increment(ref successCount);
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Increment(ref failureCount);
+                _logger.LogError(ex, "Unhandled exception in SendToClient for {ClientId}", client.ClientId);
+            }
+        }).ToArray();
+
+        await Task.WhenAll(sendTasks);
+
+        _logger.LogInformation("Event {EventType} broadcast completed: {SuccessCount} succeeded, {FailureCount} failed out of {TotalCount} clients",
+            eventData.EventType, successCount, failureCount, targetClients.Count);
     }
 
     private async Task SendEventToClients(OrderEvent eventData, ClientType targetClientType)
@@ -190,24 +208,34 @@ public class OrderEventService : IOrderEventService
             eventData.EventType, targetClients.Count, targetClientType,
             string.Join(", ", targetClients.Select(c => c.ClientId)));
 
-        var tasks = new List<Task>();
-
-        foreach (var client in targetClients)
-        {
-            tasks.Add(SendToClient(client, eventBytes));
-        }
-
-        if (tasks.Count > 0)
-        {
-            await Task.WhenAll(tasks);
-            _logger.LogInformation("Event {EventType} broadcast completed to {ClientCount} client(s)",
-                eventData.EventType, targetClients.Count);
-        }
-        else
+        if (targetClients.Count == 0)
         {
             _logger.LogWarning("No clients to broadcast event {EventType} for type {ClientType}",
                 eventData.EventType, targetClientType);
+            return;
         }
+
+        // Send to all clients in parallel, but track each individually
+        int successCount = 0;
+        int failureCount = 0;
+        var sendTasks = targetClients.Select(async client =>
+        {
+            try
+            {
+                await SendToClient(client, eventBytes);
+                Interlocked.Increment(ref successCount);
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Increment(ref failureCount);
+                _logger.LogError(ex, "Unhandled exception in SendToClient for {ClientId}", client.ClientId);
+            }
+        }).ToArray();
+
+        await Task.WhenAll(sendTasks);
+
+        _logger.LogInformation("Event {EventType} broadcast completed: {SuccessCount} succeeded, {FailureCount} failed out of {TotalCount} clients",
+            eventData.EventType, successCount, failureCount, targetClients.Count);
     }
 
     private async Task SendToClient(SseClient client, byte[] eventBytes)
