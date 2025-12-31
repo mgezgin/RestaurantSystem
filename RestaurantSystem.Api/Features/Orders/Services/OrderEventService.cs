@@ -18,14 +18,26 @@ public class OrderEventService : IOrderEventService
     public void AddClient(string clientId, SseClient client)
     {
         _clients.TryAdd(clientId, client);
-        _logger.LogInformation("SSE client {ClientId} connected. Total clients: {Count}", clientId, _clients.Count);
+        var clientsByType = _clients.Values.GroupBy(c => c.ClientType).ToDictionary(g => g.Key, g => g.Count());
+        _logger.LogInformation("SSE client {ClientId} ({ClientType}) connected. Total clients: {Count} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager}, Stock: {Stock})",
+            clientId, client.ClientType, _clients.Count,
+            clientsByType.GetValueOrDefault(ClientType.Kitchen, 0),
+            clientsByType.GetValueOrDefault(ClientType.Service, 0),
+            clientsByType.GetValueOrDefault(ClientType.Manager, 0),
+            clientsByType.GetValueOrDefault(ClientType.Stock, 0));
     }
 
     public void RemoveClient(string clientId)
     {
-        if (_clients.TryRemove(clientId, out _))
+        if (_clients.TryRemove(clientId, out var removedClient))
         {
-            _logger.LogInformation("SSE client {ClientId} disconnected. Total clients: {Count}", clientId, _clients.Count);
+            var clientsByType = _clients.Values.GroupBy(c => c.ClientType).ToDictionary(g => g.Key, g => g.Count());
+            _logger.LogInformation("SSE client {ClientId} ({ClientType}) disconnected. Total clients: {Count} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager}, Stock: {Stock})",
+                clientId, removedClient.ClientType, _clients.Count,
+                clientsByType.GetValueOrDefault(ClientType.Kitchen, 0),
+                clientsByType.GetValueOrDefault(ClientType.Service, 0),
+                clientsByType.GetValueOrDefault(ClientType.Manager, 0),
+                clientsByType.GetValueOrDefault(ClientType.Stock, 0));
         }
     }
 
@@ -174,8 +186,9 @@ public class OrderEventService : IOrderEventService
         var targetClients = _clients.Values.Where(c =>
             targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager).ToList();
 
-        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s)",
-            eventData.EventType, targetClients.Count, targetClientType);
+        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s): [{ClientIds}]",
+            eventData.EventType, targetClients.Count, targetClientType,
+            string.Join(", ", targetClients.Select(c => c.ClientId)));
 
         var tasks = new List<Task>();
 
@@ -187,6 +200,13 @@ public class OrderEventService : IOrderEventService
         if (tasks.Count > 0)
         {
             await Task.WhenAll(tasks);
+            _logger.LogInformation("Event {EventType} broadcast completed to {ClientCount} client(s)",
+                eventData.EventType, targetClients.Count);
+        }
+        else
+        {
+            _logger.LogWarning("No clients to broadcast event {EventType} for type {ClientType}",
+                eventData.EventType, targetClientType);
         }
     }
 
@@ -194,7 +214,7 @@ public class OrderEventService : IOrderEventService
     {
         try
         {
-            _logger.LogDebug("Sending event to client {ClientId} ({ClientType}), {ByteCount} bytes",
+            _logger.LogInformation("Sending event to client {ClientId} ({ClientType}), {ByteCount} bytes",
                 client.ClientId, client.ClientType, eventBytes.Length);
 
             // Use timeout to prevent hanging on dead connections (5 seconds max per client)
@@ -203,16 +223,16 @@ public class OrderEventService : IOrderEventService
             await client.Response.Body.WriteAsync(eventBytes, cts.Token);
             await client.Response.Body.FlushAsync(cts.Token);
 
-            _logger.LogDebug("Event successfully sent to client {ClientId}", client.ClientId);
+            _logger.LogInformation("✓ Event successfully sent to client {ClientId}", client.ClientId);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Timeout sending event to client {ClientId} - removing client", client.ClientId);
+            _logger.LogWarning("✗ Timeout sending event to client {ClientId} - removing client", client.ClientId);
             RemoveClient(client.ClientId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send event to client {ClientId} - removing client", client.ClientId);
+            _logger.LogError(ex, "✗ Failed to send event to client {ClientId} - removing client", client.ClientId);
             RemoveClient(client.ClientId);
         }
     }
