@@ -98,21 +98,39 @@ public class EventsController : ControllerBase
             var connectionJson = System.Text.Json.JsonSerializer.Serialize(connectionData,
                 new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
 
-            await Response.WriteAsync($"event: connected\ndata: {connectionJson}\n\n", cancellationToken);
-            await Response.Body.FlushAsync(cancellationToken);
+            // Send initial connection event with lock
+            await client.WriteLock.WaitAsync(cancellationToken);
+            try
+            {
+                await Response.WriteAsync($"event: connected\ndata: {connectionJson}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
+            }
+            finally
+            {
+                client.WriteLock.Release();
+            }
 
             // Keep connection alive with heartbeats (every 15 seconds for better reliability)
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(15000, cancellationToken);
-                
+
                 // Send proper SSE event format (not just a comment) so frontend can track heartbeats
                 var heartbeatData = new { timestamp = DateTime.UtcNow };
                 var heartbeatJson = System.Text.Json.JsonSerializer.Serialize(heartbeatData,
                     new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
-                
-                await Response.WriteAsync($"event: heartbeat\ndata: {heartbeatJson}\n\n", cancellationToken);
-                await Response.Body.FlushAsync(cancellationToken);
+
+                // Acquire lock to prevent concurrent writes with events
+                await client.WriteLock.WaitAsync(cancellationToken);
+                try
+                {
+                    await Response.WriteAsync($"event: heartbeat\ndata: {heartbeatJson}\n\n", cancellationToken);
+                    await Response.Body.FlushAsync(cancellationToken);
+                }
+                finally
+                {
+                    client.WriteLock.Release();
+                }
             }
         }
         catch (TaskCanceledException)

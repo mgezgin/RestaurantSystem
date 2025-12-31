@@ -248,8 +248,17 @@ public class OrderEventService : IOrderEventService
             // Use timeout to prevent hanging on dead connections (5 seconds max per client)
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-            await client.Response.Body.WriteAsync(eventBytes, cts.Token);
-            await client.Response.Body.FlushAsync(cts.Token);
+            // Acquire lock to prevent concurrent writes (heartbeat vs event)
+            await client.WriteLock.WaitAsync(cts.Token);
+            try
+            {
+                await client.Response.Body.WriteAsync(eventBytes, cts.Token);
+                await client.Response.Body.FlushAsync(cts.Token);
+            }
+            finally
+            {
+                client.WriteLock.Release();
+            }
 
             _logger.LogInformation("✓ Event successfully sent to client {ClientId}", client.ClientId);
         }
@@ -285,6 +294,9 @@ public class OrderEventService : IOrderEventService
         public HttpResponse Response { get; set; } = null!;
         public ClientType ClientType { get; set; }
         public DateTime ConnectedAt { get; set; }
+
+        // Synchronization for concurrent writes (heartbeats vs events)
+        public SemaphoreSlim WriteLock { get; } = new SemaphoreSlim(1, 1);
     }
 
     public class OrderEvent
