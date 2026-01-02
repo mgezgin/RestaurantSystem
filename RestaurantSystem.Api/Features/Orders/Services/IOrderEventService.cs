@@ -14,4 +14,6 @@ public interface IOrderEventService
     Task NotifyFocusOrderUpdate(OrderDto order);
 
     Task NotifyStockUpdate(string stock);
+
+    object GetClientStatistics();
 }

@@ -294,6 +294,28 @@ public class OrderEventService : IOrderEventService
         };
     }
 
+    public object GetClientStatistics()
+    {
+        var clientsByType = _clients.Values.GroupBy(c => c.ClientType)
+            .ToDictionary(g => g.Key.ToString(), g => g.Select(c => new
+            {
+                clientId = c.ClientId,
+                connectedAt = c.ConnectedAt,
+                connectedDuration = DateTime.UtcNow - c.ConnectedAt
+            }).ToList());
+
+        return new
+        {
+            totalClients = _clients.Count,
+            kitchenClients = _clients.Values.Count(c => c.ClientType == ClientType.Kitchen),
+            serviceClients = _clients.Values.Count(c => c.ClientType == ClientType.Service),
+            managerClients = _clients.Values.Count(c => c.ClientType == ClientType.Manager),
+            stockClients = _clients.Values.Count(c => c.ClientType == ClientType.Stock),
+            clientDetails = clientsByType,
+            timestamp = DateTime.UtcNow
+        };
+    }
+
     public class SseClient
     {
         public string ClientId { get; set; } = null!;

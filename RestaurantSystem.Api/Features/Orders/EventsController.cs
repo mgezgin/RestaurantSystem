@@ -59,6 +59,16 @@ public class EventsController : ControllerBase
         await SetupSseConnection(OrderEventService.ClientType.Manager, cancellationToken);
     }
 
+    /// <summary>
+    /// Get diagnostic info about connected clients
+    /// </summary>
+    [HttpGet("diagnostics")]
+    public IActionResult GetDiagnostics()
+    {
+        var stats = _orderEventService.GetClientStatistics();
+        return Ok(stats);
+    }
+
     private async Task SetupSseConnection(OrderEventService.ClientType clientType, CancellationToken cancellationToken)
     {
         var clientId = Guid.NewGuid().ToString();
