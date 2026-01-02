@@ -346,7 +346,7 @@ public class OrderEventService : IOrderEventService
             _logger.LogWarning(timeoutMsg);
             AddLog("Warning", timeoutMsg, eventType, client.ClientId);
 
-            // Track error
+            // Track error (limit to last 10 errors per client to prevent unbounded growth)
             client.FailedSends++;
             client.Errors.Add(new ClientError
             {
@@ -356,6 +356,12 @@ public class OrderEventService : IOrderEventService
                 EventType = eventType
             });
 
+            // Keep only last 10 errors per client
+            if (client.Errors.Count > 10)
+            {
+                client.Errors.RemoveAt(0);
+            }
+
             RemoveClient(client.ClientId);
         }
         catch (Exception ex)
@@ -364,7 +370,7 @@ public class OrderEventService : IOrderEventService
             _logger.LogError(ex, "✗ Failed to send event to client {ClientId} - removing client", client.ClientId);
             AddLog("Error", errorMsg, eventType, client.ClientId);
 
-            // Track error
+            // Track error (limit to last 10 errors per client to prevent unbounded growth)
             client.FailedSends++;
             client.Errors.Add(new ClientError
             {
@@ -373,6 +379,12 @@ public class OrderEventService : IOrderEventService
                 Message = ex.Message,
                 EventType = eventType
             });
+
+            // Keep only last 10 errors per client
+            if (client.Errors.Count > 10)
+            {
+                client.Errors.RemoveAt(0);
+            }
 
             RemoveClient(client.ClientId);
         }
