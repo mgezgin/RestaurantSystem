@@ -132,6 +132,10 @@ public class EventsController : ControllerBase
                 client.WriteLock.Release();
             }
 
+            // Replay any recent events the client might have missed during reconnection
+            // This ensures page refreshes don't miss events that occurred during the connection gap
+            await _orderEventService.ReplayRecentEventsAsync(client);
+
             // Keep connection alive with heartbeats (every 15 seconds for better reliability)
             while (!cancellationToken.IsCancellationRequested)
             {
