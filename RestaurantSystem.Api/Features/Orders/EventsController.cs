@@ -126,6 +126,7 @@ public class EventsController : ControllerBase
             {
                 await Response.WriteAsync($"event: connected\ndata: {connectionJson}\n\n", cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
+                client.LastActivityAt = DateTime.UtcNow; // Update activity timestamp
             }
             finally
             {
@@ -152,6 +153,7 @@ public class EventsController : ControllerBase
                 {
                     await Response.WriteAsync($"event: heartbeat\ndata: {heartbeatJson}\n\n", cancellationToken);
                     await Response.Body.FlushAsync(cancellationToken);
+                    client.LastActivityAt = DateTime.UtcNow; // Update activity timestamp
                 }
                 finally
                 {
