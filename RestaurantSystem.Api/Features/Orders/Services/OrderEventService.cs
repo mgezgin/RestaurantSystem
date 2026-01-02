@@ -11,10 +11,39 @@ public class OrderEventService : IOrderEventService
     private readonly ILogger<OrderEventService> _logger;
     private readonly ConcurrentQueue<LogEntry> _recentLogs = new();
     private const int MaxLogEntries = 100;
+    private readonly Timer _cleanupTimer;
+
+    // Consider a client stale if no activity for 2 minutes (should receive heartbeats every 15 seconds)
+    private static readonly TimeSpan StaleClientTimeout = TimeSpan.FromMinutes(2);
 
     public OrderEventService(ILogger<OrderEventService> logger)
     {
         _logger = logger;
+
+        // Run cleanup every 30 seconds
+        _cleanupTimer = new Timer(CleanupStaleClients, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private void CleanupStaleClients(object? state)
+    {
+        var now = DateTime.UtcNow;
+        var staleClients = _clients.Values
+            .Where(c => now - c.LastActivityAt > StaleClientTimeout)
+            .ToList();
+
+        if (staleClients.Any())
+        {
+            _logger.LogWarning("Found {Count} stale clients (no activity for {Minutes} minutes), removing...",
+                staleClients.Count, StaleClientTimeout.TotalMinutes);
+
+            foreach (var client in staleClients)
+            {
+                var msg = $"Removing stale client {client.ClientId} ({client.ClientType}) - no activity since {client.LastActivityAt}";
+                _logger.LogWarning(msg);
+                AddLog("Warning", msg, null, client.ClientId);
+                RemoveClient(client.ClientId);
+            }
+        }
     }
 
     private void AddLog(string level, string message, string? eventType = null, string? clientId = null)
@@ -54,6 +83,9 @@ public class OrderEventService : IOrderEventService
 
             _logger.LogInformation(message);
             AddLog("Info", message, null, clientId);
+
+            // Dispose SemaphoreSlim to prevent memory leak
+            removedClient.Dispose();
         }
     }
 
@@ -302,6 +334,7 @@ public class OrderEventService : IOrderEventService
             // Track successful send
             client.SuccessfulSends++;
             client.LastEventSentAt = DateTime.UtcNow;
+            client.LastActivityAt = DateTime.UtcNow; // Update activity timestamp to prevent stale cleanup
 
             var successMsg = $"✓ Event successfully sent to client {client.ClientId}";
             _logger.LogInformation(successMsg);
@@ -369,6 +402,8 @@ public class OrderEventService : IOrderEventService
                 country = c.Country ?? "Unknown",
                 connectedAt = c.ConnectedAt,
                 connectedDuration = DateTime.UtcNow - c.ConnectedAt,
+                lastActivityAt = c.LastActivityAt,
+                timeSinceLastActivity = DateTime.UtcNow - c.LastActivityAt,
                 successfulSends = c.SuccessfulSends,
                 failedSends = c.FailedSends,
                 lastEventSentAt = c.LastEventSentAt,
@@ -425,7 +460,7 @@ public class OrderEventService : IOrderEventService
         };
     }
 
-    public class SseClient
+    public class SseClient : IDisposable
     {
         public string ClientId { get; set; } = null!;
         public HttpResponse Response { get; set; } = null!;
@@ -442,6 +477,18 @@ public class OrderEventService : IOrderEventService
         public int SuccessfulSends { get; set; } = 0;
         public int FailedSends { get; set; } = 0;
         public DateTime? LastEventSentAt { get; set; }
+        public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                WriteLock?.Dispose();
+                _disposed = true;
+            }
+        }
     }
 
     public class ClientError
