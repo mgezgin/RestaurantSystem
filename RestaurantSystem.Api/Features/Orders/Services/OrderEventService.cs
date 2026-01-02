@@ -9,22 +9,40 @@ public class OrderEventService : IOrderEventService
 {
     private readonly ConcurrentDictionary<string, SseClient> _clients = new();
     private readonly ILogger<OrderEventService> _logger;
+    private readonly ConcurrentQueue<LogEntry> _recentLogs = new();
+    private const int MaxLogEntries = 100;
 
     public OrderEventService(ILogger<OrderEventService> logger)
     {
         _logger = logger;
     }
 
+    private void AddLog(string level, string message, string? eventType = null, string? clientId = null)
+    {
+        _recentLogs.Enqueue(new LogEntry
+        {
+            Timestamp = DateTime.UtcNow,
+            Level = level,
+            Message = message,
+            EventType = eventType,
+            ClientId = clientId
+        });
+
+        // Keep only last MaxLogEntries
+        while (_recentLogs.Count > MaxLogEntries)
+        {
+            _recentLogs.TryDequeue(out _);
+        }
+    }
+
     public void AddClient(string clientId, SseClient client)
     {
         _clients.TryAdd(clientId, client);
         var clientsByType = _clients.Values.GroupBy(c => c.ClientType).ToDictionary(g => g.Key, g => g.Count());
-        _logger.LogInformation("SSE client {ClientId} ({ClientType}) connected from {IpAddress} ({Country}). Total clients: {Count} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager}, Stock: {Stock})",
-            clientId, client.ClientType, client.IpAddress, client.Country ?? "Unknown", _clients.Count,
-            clientsByType.GetValueOrDefault(ClientType.Kitchen, 0),
-            clientsByType.GetValueOrDefault(ClientType.Service, 0),
-            clientsByType.GetValueOrDefault(ClientType.Manager, 0),
-            clientsByType.GetValueOrDefault(ClientType.Stock, 0));
+        var message = $"SSE client {clientId} ({client.ClientType}) connected from {client.IpAddress} ({client.Country ?? "Unknown"}). Total clients: {_clients.Count} (Kitchen: {clientsByType.GetValueOrDefault(ClientType.Kitchen, 0)}, Service: {clientsByType.GetValueOrDefault(ClientType.Service, 0)}, Manager: {clientsByType.GetValueOrDefault(ClientType.Manager, 0)}, Stock: {clientsByType.GetValueOrDefault(ClientType.Stock, 0)})";
+
+        _logger.LogInformation(message);
+        AddLog("Info", message, null, clientId);
     }
 
     public void RemoveClient(string clientId)
@@ -32,12 +50,10 @@ public class OrderEventService : IOrderEventService
         if (_clients.TryRemove(clientId, out var removedClient))
         {
             var clientsByType = _clients.Values.GroupBy(c => c.ClientType).ToDictionary(g => g.Key, g => g.Count());
-            _logger.LogInformation("SSE client {ClientId} ({ClientType}) disconnected. Total clients: {Count} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager}, Stock: {Stock})",
-                clientId, removedClient.ClientType, _clients.Count,
-                clientsByType.GetValueOrDefault(ClientType.Kitchen, 0),
-                clientsByType.GetValueOrDefault(ClientType.Service, 0),
-                clientsByType.GetValueOrDefault(ClientType.Manager, 0),
-                clientsByType.GetValueOrDefault(ClientType.Stock, 0));
+            var message = $"SSE client {clientId} ({removedClient.ClientType}) disconnected. Total clients: {_clients.Count} (Kitchen: {clientsByType.GetValueOrDefault(ClientType.Kitchen, 0)}, Service: {clientsByType.GetValueOrDefault(ClientType.Service, 0)}, Manager: {clientsByType.GetValueOrDefault(ClientType.Manager, 0)}, Stock: {clientsByType.GetValueOrDefault(ClientType.Stock, 0)})";
+
+            _logger.LogInformation(message);
+            AddLog("Info", message, null, clientId);
         }
     }
 
@@ -67,11 +83,17 @@ public class OrderEventService : IOrderEventService
         var managerClients = _clients.Values.Count(c => c.ClientType == ClientType.Manager);
         var allClients = _clients.Count;
 
-        _logger.LogInformation("=== ORDER CREATED: {OrderNumber} ===", order.OrderNumber);
-        _logger.LogInformation("Total connected clients: {TotalClients} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager})",
-            allClients, kitchenClients, serviceClients, managerClients);
-        _logger.LogInformation("Will notify {KitchenCount} kitchen, {ServiceCount} service, and {ManagerCount} manager client(s)",
-            kitchenClients, serviceClients, managerClients);
+        var msg1 = $"=== ORDER CREATED: {order.OrderNumber} ===";
+        var msg2 = $"Total connected clients: {allClients} (Kitchen: {kitchenClients}, Service: {serviceClients}, Manager: {managerClients})";
+        var msg3 = $"Will notify {kitchenClients} kitchen, {serviceClients} service, and {managerClients} manager client(s)";
+
+        _logger.LogInformation(msg1);
+        _logger.LogInformation(msg2);
+        _logger.LogInformation(msg3);
+
+        AddLog("Info", msg1, "order-created");
+        AddLog("Info", msg2, "order-created");
+        AddLog("Info", msg3, "order-created");
 
         // Notify kitchen staff of new orders
         await SendEventToClients(eventData, ClientType.Kitchen);
@@ -79,7 +101,9 @@ public class OrderEventService : IOrderEventService
         // Also notify service staff (cashiers) of new orders
         await SendEventToClients(eventData, ClientType.Service);
 
-        _logger.LogInformation("=== Order creation notification completed for order {OrderNumber} ===", order.OrderNumber);
+        var msg4 = $"=== Order creation notification completed for order {order.OrderNumber} ===";
+        _logger.LogInformation(msg4);
+        AddLog("Info", msg4, "order-created");
     }
 
     public async Task NotifyOrderStatusChanged(OrderDto order, string previousStatus)
@@ -163,14 +187,15 @@ public class OrderEventService : IOrderEventService
         var targetClients = _clients.Values.Where(c =>
             targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager).ToList();
 
-        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s): [{ClientIds}]",
-            eventData.EventType, targetClients.Count, targetClientType,
-            string.Join(", ", targetClients.Select(c => c.ClientId)));
+        var broadcastMsg = $"Broadcasting event {eventData.EventType} to {targetClients.Count} {targetClientType} client(s): [{string.Join(", ", targetClients.Select(c => c.ClientId))}]";
+        _logger.LogInformation(broadcastMsg);
+        AddLog("Info", broadcastMsg, eventData.EventType);
 
         if (targetClients.Count == 0)
         {
-            _logger.LogWarning("No clients to broadcast event {EventType} for type {ClientType}",
-                eventData.EventType, targetClientType);
+            var warnMsg = $"No clients to broadcast event {eventData.EventType} for type {targetClientType}";
+            _logger.LogWarning(warnMsg);
+            AddLog("Warning", warnMsg, eventData.EventType);
             return;
         }
 
@@ -187,14 +212,17 @@ public class OrderEventService : IOrderEventService
             catch (Exception ex)
             {
                 Interlocked.Increment(ref failureCount);
-                _logger.LogError(ex, "Unhandled exception in SendToClient for {ClientId}", client.ClientId);
+                var errorMsg = $"Unhandled exception in SendToClient for {client.ClientId}";
+                _logger.LogError(ex, errorMsg);
+                AddLog("Error", $"{errorMsg}: {ex.Message}", eventData.EventType, client.ClientId);
             }
         }).ToArray();
 
         await Task.WhenAll(sendTasks);
 
-        _logger.LogInformation("Event {EventType} broadcast completed: {SuccessCount} succeeded, {FailureCount} failed out of {TotalCount} clients",
-            eventData.EventType, successCount, failureCount, targetClients.Count);
+        var completeMsg = $"Event {eventData.EventType} broadcast completed: {successCount} succeeded, {failureCount} failed out of {targetClients.Count} clients";
+        _logger.LogInformation(completeMsg);
+        AddLog("Info", completeMsg, eventData.EventType);
     }
 
     private async Task SendEventToClients(OrderEvent eventData, ClientType targetClientType)
@@ -210,14 +238,15 @@ public class OrderEventService : IOrderEventService
         var targetClients = _clients.Values.Where(c =>
             targetClientType == ClientType.All || c.ClientType == targetClientType || c.ClientType == ClientType.Manager).ToList();
 
-        _logger.LogInformation("Broadcasting event {EventType} to {ClientCount} {ClientType} client(s): [{ClientIds}]",
-            eventData.EventType, targetClients.Count, targetClientType,
-            string.Join(", ", targetClients.Select(c => c.ClientId)));
+        var broadcastMsg = $"Broadcasting event {eventData.EventType} to {targetClients.Count} {targetClientType} client(s): [{string.Join(", ", targetClients.Select(c => c.ClientId))}]";
+        _logger.LogInformation(broadcastMsg);
+        AddLog("Info", broadcastMsg, eventData.EventType);
 
         if (targetClients.Count == 0)
         {
-            _logger.LogWarning("No clients to broadcast event {EventType} for type {ClientType}",
-                eventData.EventType, targetClientType);
+            var warnMsg = $"No clients to broadcast event {eventData.EventType} for type {targetClientType}";
+            _logger.LogWarning(warnMsg);
+            AddLog("Warning", warnMsg, eventData.EventType);
             return;
         }
 
@@ -234,22 +263,26 @@ public class OrderEventService : IOrderEventService
             catch (Exception ex)
             {
                 Interlocked.Increment(ref failureCount);
-                _logger.LogError(ex, "Unhandled exception in SendToClient for {ClientId}", client.ClientId);
+                var errorMsg = $"Unhandled exception in SendToClient for {client.ClientId}";
+                _logger.LogError(ex, errorMsg);
+                AddLog("Error", $"{errorMsg}: {ex.Message}", eventData.EventType, client.ClientId);
             }
         }).ToArray();
 
         await Task.WhenAll(sendTasks);
 
-        _logger.LogInformation("Event {EventType} broadcast completed: {SuccessCount} succeeded, {FailureCount} failed out of {TotalCount} clients",
-            eventData.EventType, successCount, failureCount, targetClients.Count);
+        var completeMsg = $"Event {eventData.EventType} broadcast completed: {successCount} succeeded, {failureCount} failed out of {targetClients.Count} clients";
+        _logger.LogInformation(completeMsg);
+        AddLog("Info", completeMsg, eventData.EventType);
     }
 
     private async Task SendToClient(SseClient client, byte[] eventBytes, string? eventType = null)
     {
         try
         {
-            _logger.LogInformation("Sending event to client {ClientId} ({ClientType}), {ByteCount} bytes",
-                client.ClientId, client.ClientType, eventBytes.Length);
+            var sendingMsg = $"Sending event to client {client.ClientId} ({client.ClientType}), {eventBytes.Length} bytes";
+            _logger.LogInformation(sendingMsg);
+            AddLog("Info", sendingMsg, eventType, client.ClientId);
 
             // Use timeout to prevent hanging on dead connections (5 seconds max per client)
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -270,11 +303,15 @@ public class OrderEventService : IOrderEventService
             client.SuccessfulSends++;
             client.LastEventSentAt = DateTime.UtcNow;
 
-            _logger.LogInformation("✓ Event successfully sent to client {ClientId}", client.ClientId);
+            var successMsg = $"✓ Event successfully sent to client {client.ClientId}";
+            _logger.LogInformation(successMsg);
+            AddLog("Info", successMsg, eventType, client.ClientId);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("✗ Timeout sending event to client {ClientId} - removing client", client.ClientId);
+            var timeoutMsg = $"✗ Timeout sending event to client {client.ClientId} - removing client";
+            _logger.LogWarning(timeoutMsg);
+            AddLog("Warning", timeoutMsg, eventType, client.ClientId);
 
             // Track error
             client.FailedSends++;
@@ -290,7 +327,9 @@ public class OrderEventService : IOrderEventService
         }
         catch (Exception ex)
         {
+            var errorMsg = $"✗ Failed to send event to client {client.ClientId} - removing client: {ex.Message}";
             _logger.LogError(ex, "✗ Failed to send event to client {ClientId} - removing client", client.ClientId);
+            AddLog("Error", errorMsg, eventType, client.ClientId);
 
             // Track error
             client.FailedSends++;
@@ -359,6 +398,15 @@ public class OrderEventService : IOrderEventService
             .OrderByDescending(e => e.timestamp)
             .ToList();
 
+        var recentLogs = _recentLogs.OrderByDescending(l => l.Timestamp).Take(50).Select(l => new
+        {
+            timestamp = l.Timestamp,
+            level = l.Level,
+            message = l.Message,
+            eventType = l.EventType,
+            clientId = l.ClientId
+        }).ToList();
+
         return new
         {
             totalClients = _clients.Count,
@@ -372,6 +420,7 @@ public class OrderEventService : IOrderEventService
             totalFailedSends = _clients.Values.Sum(c => c.FailedSends),
             clientDetails = clientsByType,
             recentErrors = allErrors.Take(20).ToList(), // Last 20 errors across all clients
+            recentLogs = recentLogs, // Last 50 log entries
             timestamp = DateTime.UtcNow
         };
     }
@@ -401,6 +450,15 @@ public class OrderEventService : IOrderEventService
         public string ErrorType { get; set; } = null!;
         public string Message { get; set; } = null!;
         public string? EventType { get; set; }
+    }
+
+    public class LogEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public string Level { get; set; } = null!;
+        public string Message { get; set; } = null!;
+        public string? EventType { get; set; }
+        public string? ClientId { get; set; }
     }
 
     public class OrderEvent
