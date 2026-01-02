@@ -64,8 +64,14 @@ public class OrderEventService : IOrderEventService
 
         var kitchenClients = _clients.Values.Count(c => c.ClientType == ClientType.Kitchen);
         var serviceClients = _clients.Values.Count(c => c.ClientType == ClientType.Service);
-        _logger.LogInformation("Notifying {KitchenCount} kitchen and {ServiceCount} service client(s) of new order {OrderNumber}",
-            kitchenClients, serviceClients, order.OrderNumber);
+        var managerClients = _clients.Values.Count(c => c.ClientType == ClientType.Manager);
+        var allClients = _clients.Count;
+
+        _logger.LogInformation("=== ORDER CREATED: {OrderNumber} ===", order.OrderNumber);
+        _logger.LogInformation("Total connected clients: {TotalClients} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager})",
+            allClients, kitchenClients, serviceClients, managerClients);
+        _logger.LogInformation("Will notify {KitchenCount} kitchen, {ServiceCount} service, and {ManagerCount} manager client(s)",
+            kitchenClients, serviceClients, managerClients);
 
         // Notify kitchen staff of new orders
         await SendEventToClients(eventData, ClientType.Kitchen);
@@ -73,7 +79,7 @@ public class OrderEventService : IOrderEventService
         // Also notify service staff (cashiers) of new orders
         await SendEventToClients(eventData, ClientType.Service);
 
-        _logger.LogInformation("Order creation notification sent for order {OrderNumber}", order.OrderNumber);
+        _logger.LogInformation("=== Order creation notification completed for order {OrderNumber} ===", order.OrderNumber);
     }
 
     public async Task NotifyOrderStatusChanged(OrderDto order, string previousStatus)
