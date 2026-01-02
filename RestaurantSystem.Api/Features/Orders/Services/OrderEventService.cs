@@ -19,8 +19,8 @@ public class OrderEventService : IOrderEventService
     {
         _clients.TryAdd(clientId, client);
         var clientsByType = _clients.Values.GroupBy(c => c.ClientType).ToDictionary(g => g.Key, g => g.Count());
-        _logger.LogInformation("SSE client {ClientId} ({ClientType}) connected. Total clients: {Count} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager}, Stock: {Stock})",
-            clientId, client.ClientType, _clients.Count,
+        _logger.LogInformation("SSE client {ClientId} ({ClientType}) connected from {IpAddress} ({Country}). Total clients: {Count} (Kitchen: {Kitchen}, Service: {Service}, Manager: {Manager}, Stock: {Stock})",
+            clientId, client.ClientType, client.IpAddress, client.Country ?? "Unknown", _clients.Count,
             clientsByType.GetValueOrDefault(ClientType.Kitchen, 0),
             clientsByType.GetValueOrDefault(ClientType.Service, 0),
             clientsByType.GetValueOrDefault(ClientType.Manager, 0),
@@ -181,7 +181,7 @@ public class OrderEventService : IOrderEventService
         {
             try
             {
-                await SendToClient(client, eventBytes);
+                await SendToClient(client, eventBytes, eventData.EventType);
                 Interlocked.Increment(ref successCount);
             }
             catch (Exception ex)
@@ -228,7 +228,7 @@ public class OrderEventService : IOrderEventService
         {
             try
             {
-                await SendToClient(client, eventBytes);
+                await SendToClient(client, eventBytes, eventData.EventType);
                 Interlocked.Increment(ref successCount);
             }
             catch (Exception ex)
@@ -244,7 +244,7 @@ public class OrderEventService : IOrderEventService
             eventData.EventType, successCount, failureCount, targetClients.Count);
     }
 
-    private async Task SendToClient(SseClient client, byte[] eventBytes)
+    private async Task SendToClient(SseClient client, byte[] eventBytes, string? eventType = null)
     {
         try
         {
@@ -266,16 +266,42 @@ public class OrderEventService : IOrderEventService
                 client.WriteLock.Release();
             }
 
+            // Track successful send
+            client.SuccessfulSends++;
+            client.LastEventSentAt = DateTime.UtcNow;
+
             _logger.LogInformation("✓ Event successfully sent to client {ClientId}", client.ClientId);
         }
         catch (OperationCanceledException)
         {
             _logger.LogWarning("✗ Timeout sending event to client {ClientId} - removing client", client.ClientId);
+
+            // Track error
+            client.FailedSends++;
+            client.Errors.Add(new ClientError
+            {
+                Timestamp = DateTime.UtcNow,
+                ErrorType = "Timeout",
+                Message = "Timeout sending event (5 seconds exceeded)",
+                EventType = eventType
+            });
+
             RemoveClient(client.ClientId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "✗ Failed to send event to client {ClientId} - removing client", client.ClientId);
+
+            // Track error
+            client.FailedSends++;
+            client.Errors.Add(new ClientError
+            {
+                Timestamp = DateTime.UtcNow,
+                ErrorType = ex.GetType().Name,
+                Message = ex.Message,
+                EventType = eventType
+            });
+
             RemoveClient(client.ClientId);
         }
     }
@@ -300,9 +326,38 @@ public class OrderEventService : IOrderEventService
             .ToDictionary(g => g.Key.ToString(), g => g.Select(c => new
             {
                 clientId = c.ClientId,
+                ipAddress = c.IpAddress,
+                country = c.Country ?? "Unknown",
                 connectedAt = c.ConnectedAt,
-                connectedDuration = DateTime.UtcNow - c.ConnectedAt
+                connectedDuration = DateTime.UtcNow - c.ConnectedAt,
+                successfulSends = c.SuccessfulSends,
+                failedSends = c.FailedSends,
+                lastEventSentAt = c.LastEventSentAt,
+                errors = c.Errors.Select(e => new
+                {
+                    timestamp = e.Timestamp,
+                    errorType = e.ErrorType,
+                    message = e.Message,
+                    eventType = e.EventType
+                }).ToList(),
+                hasErrors = c.Errors.Any(),
+                errorCount = c.Errors.Count
             }).ToList());
+
+        var allErrors = _clients.Values
+            .SelectMany(c => c.Errors.Select(e => new
+            {
+                clientId = c.ClientId,
+                clientType = c.ClientType.ToString(),
+                ipAddress = c.IpAddress,
+                country = c.Country ?? "Unknown",
+                timestamp = e.Timestamp,
+                errorType = e.ErrorType,
+                message = e.Message,
+                eventType = e.EventType
+            }))
+            .OrderByDescending(e => e.timestamp)
+            .ToList();
 
         return new
         {
@@ -311,7 +366,12 @@ public class OrderEventService : IOrderEventService
             serviceClients = _clients.Values.Count(c => c.ClientType == ClientType.Service),
             managerClients = _clients.Values.Count(c => c.ClientType == ClientType.Manager),
             stockClients = _clients.Values.Count(c => c.ClientType == ClientType.Stock),
+            clientsWithErrors = _clients.Values.Count(c => c.Errors.Any()),
+            totalErrors = _clients.Values.Sum(c => c.Errors.Count),
+            totalSuccessfulSends = _clients.Values.Sum(c => c.SuccessfulSends),
+            totalFailedSends = _clients.Values.Sum(c => c.FailedSends),
             clientDetails = clientsByType,
+            recentErrors = allErrors.Take(20).ToList(), // Last 20 errors across all clients
             timestamp = DateTime.UtcNow
         };
     }
@@ -322,9 +382,25 @@ public class OrderEventService : IOrderEventService
         public HttpResponse Response { get; set; } = null!;
         public ClientType ClientType { get; set; }
         public DateTime ConnectedAt { get; set; }
+        public string IpAddress { get; set; } = null!;
+        public string? Country { get; set; }
 
         // Synchronization for concurrent writes (heartbeats vs events)
         public SemaphoreSlim WriteLock { get; } = new SemaphoreSlim(1, 1);
+
+        // Error tracking
+        public List<ClientError> Errors { get; } = new List<ClientError>();
+        public int SuccessfulSends { get; set; } = 0;
+        public int FailedSends { get; set; } = 0;
+        public DateTime? LastEventSentAt { get; set; }
+    }
+
+    public class ClientError
+    {
+        public DateTime Timestamp { get; set; }
+        public string ErrorType { get; set; } = null!;
+        public string Message { get; set; } = null!;
+        public string? EventType { get; set; }
     }
 
     public class OrderEvent

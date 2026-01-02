@@ -84,12 +84,24 @@ public class EventsController : ControllerBase
         var bufferingFeature = Response.HttpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>();
         bufferingFeature?.DisableBuffering();
 
+        // Get client IP address (handle proxy forwarded headers)
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        if (HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+        {
+            ipAddress = forwardedFor.FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim() ?? ipAddress;
+        }
+
+        // Get country from IP (placeholder - integrate with GeoIP service if needed)
+        string? country = GetCountryFromIp(ipAddress);
+
         var client = new OrderEventService.SseClient
         {
             ClientId = clientId,
             Response = Response,
             ClientType = clientType,
-            ConnectedAt = DateTime.UtcNow
+            ConnectedAt = DateTime.UtcNow,
+            IpAddress = ipAddress,
+            Country = country
         };
 
         _orderEventService.AddClient(clientId, client);
@@ -162,5 +174,25 @@ public class EventsController : ControllerBase
             _logger.LogInformation("SSE client cleanup: {ClientId}", clientId);
             _orderEventService.RemoveClient(clientId);
         }
+    }
+
+    private string? GetCountryFromIp(string ipAddress)
+    {
+        // Placeholder for GeoIP integration
+        // You can integrate with services like:
+        // - MaxMind GeoIP2
+        // - IP2Location
+        // - ipapi.co
+        // - ip-api.com
+
+        // For localhost/private IPs, return a default
+        if (ipAddress == "Unknown" || ipAddress.StartsWith("127.") || ipAddress.StartsWith("192.168.") ||
+            ipAddress.StartsWith("10.") || ipAddress == "::1" || ipAddress.StartsWith("172."))
+        {
+            return "Local";
+        }
+
+        // TODO: Implement actual GeoIP lookup
+        return null;
     }
 }
