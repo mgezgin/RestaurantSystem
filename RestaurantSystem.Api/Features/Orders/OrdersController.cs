@@ -17,6 +17,7 @@ using RestaurantSystem.Api.Features.Orders.Dtos;
 using RestaurantSystem.Api.Features.Orders.Queries.GetFocusOrdersQuery;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrderByIdQuery;
 using RestaurantSystem.Api.Features.Orders.Queries.GetOrdersQuery;
+using RestaurantSystem.Api.Features.Orders.Queries.GetConfirmedOrdersSinceQuery;
 using RestaurantSystem.Api.Features.Orders.Services;
 
 namespace RestaurantSystem.Api.Features.Orders;
@@ -52,6 +53,29 @@ public class OrdersController : ControllerBase
         [FromQuery] GetOrdersQuery query)
     {
         var result = await _mediator.SendQuery(query);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get confirmed orders since a specific timestamp (for polling fallback)
+    /// </summary>
+    /// <remarks>
+    /// This endpoint is designed for printer apps and other clients to poll for missed orders.
+    /// It returns all orders with Status=Confirmed that were created or updated after the specified timestamp.
+    /// Use this as a safety net alongside SSE to ensure no orders are missed.
+    ///
+    /// Example: GET /api/orders/confirmed-since?since=2026-01-03T14:30:00Z
+    /// </remarks>
+    [HttpGet("confirmed-since")]
+    public async Task<ActionResult<ApiResponse<ConfirmedOrdersSinceResult>>> GetConfirmedOrdersSince(
+        [FromQuery] DateTime since)
+    {
+        var query = new GetConfirmedOrdersSinceQuery(since);
+        var result = await _mediator.SendQuery(query);
+
+        _logger.LogInformation("Polling request: {Count} confirmed orders found since {Since}",
+            result.Data?.Count ?? 0, since);
+
         return Ok(result);
     }
 
