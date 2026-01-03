@@ -220,9 +220,9 @@ public class OrderEventService : IOrderEventService, IDisposable
         var managerClients = _clients.Values.Count(c => c.ClientType == ClientType.Manager);
         var allClients = _clients.Count;
 
-        var msg1 = $"=== ORDER CREATED: {order.OrderNumber} ===";
+        var msg1 = $"=== ORDER CREATED: {order.OrderNumber} (Status: {order.Status}, Type: {order.Type}) ===";
         var msg2 = $"Total connected clients: {allClients} (Kitchen: {kitchenClients}, Service: {serviceClients}, Manager: {managerClients})";
-        var msg3 = $"Attempting to notify {kitchenClients} kitchen, {serviceClients} service, and {managerClients} manager client(s)";
+        var msg3 = $"Attempting to notify {kitchenClients} kitchen, {serviceClients} service, and {managerClients} manager client(s) about {order.Status} order";
 
         _logger.LogInformation(msg1);
         _logger.LogInformation(msg2);
@@ -235,7 +235,7 @@ public class OrderEventService : IOrderEventService, IDisposable
         // Check if any clients are connected
         if (kitchenClients == 0 && serviceClients == 0)
         {
-            var warnMsg = $"⚠️ WARNING: No Kitchen or Service clients connected for order {order.OrderNumber}! Event stored for replay when clients reconnect.";
+            var warnMsg = $"⚠️ WARNING: No Kitchen or Service clients connected for {order.Status} order {order.OrderNumber}! Event stored for replay when clients reconnect.";
             _logger.LogWarning(warnMsg);
             AddLog("Warning", warnMsg, "order-created");
         }
@@ -264,13 +264,23 @@ public class OrderEventService : IOrderEventService, IDisposable
         // Determine which clients to notify based on status
         var clientTypes = GetClientTypesForStatus(order.Status);
 
+        var msg1 = $"=== ORDER STATUS CHANGED: {order.OrderNumber} ({previousStatus} → {order.Status}) ===";
+        _logger.LogInformation(msg1);
+        AddLog("Info", msg1, "order-status-changed");
+
+        var targetClientTypes = string.Join(", ", clientTypes);
+        var msg2 = $"Notifying {targetClientTypes} clients about status change";
+        _logger.LogInformation(msg2);
+        AddLog("Info", msg2, "order-status-changed");
+
         foreach (var clientType in clientTypes)
         {
             await SendEventToClients(eventData, clientType);
         }
 
-        _logger.LogInformation("Notified clients of order {OrderNumber} status change from {Previous} to {Current}",
-            order.OrderNumber, previousStatus, order.Status);
+        var msg3 = $"Status change notification completed for order {order.OrderNumber}";
+        _logger.LogInformation(msg3);
+        AddLog("Info", msg3, "order-status-changed");
     }
 
     public async Task NotifyOrderReady(OrderDto order)
