@@ -69,6 +69,37 @@ public class EventsController : ControllerBase
         return Ok(stats);
     }
 
+    /// <summary>
+    /// Send a test event to all connected clients (for debugging SSE connections)
+    /// </summary>
+    [HttpPost("test-broadcast")]
+    public async Task<IActionResult> TestBroadcast([FromQuery] string clientType = "Kitchen")
+    {
+        var testOrder = new RestaurantSystem.Api.Features.Orders.Dtos.OrderDto
+        {
+            Id = Guid.NewGuid(),
+            OrderNumber = "TEST-" + DateTime.UtcNow.ToString("HHmmss"),
+            Status = "Pending",
+            Type = "Delivery",
+            CustomerName = "Test Customer",
+            TotalAmount = 99.99m,
+            OrderDate = DateTime.UtcNow
+        };
+
+        _logger.LogInformation("Sending test order broadcast to {ClientType} clients", clientType);
+
+        await _orderEventService.NotifyOrderCreated(testOrder);
+
+        var stats = _orderEventService.GetClientStatistics();
+
+        return Ok(new
+        {
+            message = "Test event sent",
+            testOrder = testOrder,
+            connectedClients = stats
+        });
+    }
+
     private async Task SetupSseConnection(OrderEventService.ClientType clientType, CancellationToken cancellationToken)
     {
         var clientId = Guid.NewGuid().ToString();
