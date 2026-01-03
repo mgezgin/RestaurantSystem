@@ -445,6 +445,13 @@ public class OrderEventService : IOrderEventService, IDisposable
 
     private async Task SendToClient(SseClient client, byte[] eventBytes, string? eventType = null)
     {
+        // Skip if client is already marked for disconnection
+        if (client.DisconnectCts.IsCancellationRequested)
+        {
+            _logger.LogDebug("Skipping send to client {ClientId} - already marked for disconnection", client.ClientId);
+            return;
+        }
+
         try
         {
             var sendingMsg = $"Sending event to client {client.ClientId} ({client.ClientType}), {eventBytes.Length} bytes";
@@ -477,7 +484,7 @@ public class OrderEventService : IOrderEventService, IDisposable
         }
         catch (OperationCanceledException)
         {
-            var timeoutMsg = $"✗ Timeout sending event to client {client.ClientId} - removing client";
+            var timeoutMsg = $"✗ Timeout sending event to client {client.ClientId} - signaling disconnect";
             _logger.LogWarning(timeoutMsg);
             AddLog("Warning", timeoutMsg, eventType, client.ClientId);
 
@@ -497,12 +504,13 @@ public class OrderEventService : IOrderEventService, IDisposable
                 client.Errors.RemoveAt(0);
             }
 
-            RemoveClient(client.ClientId);
+            // Signal disconnect - this will cause the heartbeat loop to exit and clean up properly
+            client.DisconnectCts.Cancel();
         }
         catch (Exception ex)
         {
-            var errorMsg = $"✗ Failed to send event to client {client.ClientId} - removing client: {ex.Message}";
-            _logger.LogError(ex, "✗ Failed to send event to client {ClientId} - removing client", client.ClientId);
+            var errorMsg = $"✗ Failed to send event to client {client.ClientId} - signaling disconnect: {ex.Message}";
+            _logger.LogError(ex, "✗ Failed to send event to client {ClientId} - signaling disconnect", client.ClientId);
             AddLog("Error", errorMsg, eventType, client.ClientId);
 
             // Track error (limit to last 10 errors per client to prevent unbounded growth)
@@ -521,7 +529,8 @@ public class OrderEventService : IOrderEventService, IDisposable
                 client.Errors.RemoveAt(0);
             }
 
-            RemoveClient(client.ClientId);
+            // Signal disconnect - this will cause the heartbeat loop to exit and clean up properly
+            client.DisconnectCts.Cancel();
         }
     }
 
@@ -647,6 +656,9 @@ public class OrderEventService : IOrderEventService, IDisposable
         // Synchronization for concurrent writes (heartbeats vs events)
         public SemaphoreSlim WriteLock { get; } = new SemaphoreSlim(1, 1);
 
+        // Cancellation token to signal when client should disconnect
+        public CancellationTokenSource DisconnectCts { get; } = new CancellationTokenSource();
+
         // Error tracking
         public List<ClientError> Errors { get; } = new List<ClientError>();
         public int SuccessfulSends { get; set; } = 0;
@@ -660,6 +672,8 @@ public class OrderEventService : IOrderEventService, IDisposable
         {
             if (!_disposed)
             {
+                DisconnectCts?.Cancel();
+                DisconnectCts?.Dispose();
                 WriteLock?.Dispose();
                 _disposed = true;
             }
