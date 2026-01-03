@@ -202,7 +202,7 @@ public class OrderEventService : IOrderEventService, IDisposable
 
         var msg1 = $"=== ORDER CREATED: {order.OrderNumber} ===";
         var msg2 = $"Total connected clients: {allClients} (Kitchen: {kitchenClients}, Service: {serviceClients}, Manager: {managerClients})";
-        var msg3 = $"Will notify {kitchenClients} kitchen, {serviceClients} service, and {managerClients} manager client(s)";
+        var msg3 = $"Attempting to notify {kitchenClients} kitchen, {serviceClients} service, and {managerClients} manager client(s)";
 
         _logger.LogInformation(msg1);
         _logger.LogInformation(msg2);
@@ -212,13 +212,21 @@ public class OrderEventService : IOrderEventService, IDisposable
         AddLog("Info", msg2, "order-created");
         AddLog("Info", msg3, "order-created");
 
+        // Check if any clients are connected
+        if (kitchenClients == 0 && serviceClients == 0)
+        {
+            var warnMsg = $"⚠️ WARNING: No Kitchen or Service clients connected for order {order.OrderNumber}! Event stored for replay when clients reconnect.";
+            _logger.LogWarning(warnMsg);
+            AddLog("Warning", warnMsg, "order-created");
+        }
+
         // Notify kitchen staff of new orders
         await SendEventToClients(eventData, ClientType.Kitchen);
 
         // Also notify service staff (cashiers) of new orders
         await SendEventToClients(eventData, ClientType.Service);
 
-        var msg4 = $"=== Order creation notification completed for order {order.OrderNumber} ===";
+        var msg4 = $"=== Order creation notification process completed for order {order.OrderNumber} (check broadcast results above) ===";
         _logger.LogInformation(msg4);
         AddLog("Info", msg4, "order-created");
     }
