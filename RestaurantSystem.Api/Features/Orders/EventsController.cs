@@ -168,10 +168,10 @@ public class EventsController : ControllerBase
             // This ensures page refreshes don't miss events that occurred during the connection gap
             await _orderEventService.ReplayRecentEventsAsync(client);
 
-            // Keep connection alive with heartbeats (every 15 seconds for better reliability)
+            // Keep connection alive with heartbeats (every 10 seconds to ensure printer app 45s timeout doesn't trigger)
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(15000, cancellationToken);
+                await Task.Delay(10000, cancellationToken);
 
                 // Send proper SSE event format (not just a comment) so frontend can track heartbeats
                 var heartbeatData = new { timestamp = DateTime.UtcNow };

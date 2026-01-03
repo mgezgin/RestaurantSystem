@@ -13,7 +13,7 @@ public class OrderEventService : IOrderEventService, IDisposable
     private const int MaxLogEntries = 100;
     private readonly Timer _cleanupTimer;
 
-    // Consider a client stale if no activity for 2 minutes (should receive heartbeats every 15 seconds)
+    // Consider a client stale if no activity for 2 minutes (should receive heartbeats every 10 seconds)
     private static readonly TimeSpan StaleClientTimeout = TimeSpan.FromMinutes(2);
     
     // Event replay buffer - stores recent events to replay to reconnecting clients
